@@ -6,17 +6,34 @@ A free, local-first CLI that helps builders spot exposed credentials, unsafe bro
 
 > **Status:** v0.1 experimental release candidate. This repository is ready to explore and contribute to, but the npm package is **not published yet**. A clean scan does **not** mean an app is secure.
 
-## 30-second demo
+## Try SafePush in 60 seconds
+
+The built-in demo creates a temporary example project with **synthetic credentials only**, scans it, shows the findings, then shows a rescan after a simulated fix. It does **not** scan your private files.
 
 ```bash
-# Clone this repository, then:
-npm install
-npm run build
-node dist/cli.mjs scan .
-
-# Check another project (use only your own / authorized projects)
-node /path/to/safepush/dist/cli.mjs scan /path/to/my-project
+git clone https://github.com/Danchikkl/SafePush.git
+cd SafePush
+npm ci --ignore-scripts
+npm run demo
 ```
+
+> Requires Node.js 22+ and npm. The CLI isn't published to npm yet.
+
+## Scan your own project
+
+```bash
+npm run build
+
+# Run the scanner on a local project you own or are authorized to check
+node dist/cli.mjs scan /path/to/your-project
+
+# Or check the exact staged Git contents
+node dist/cli.mjs scan /path/to/your-project --staged
+```
+
+Want to help improve the next release? [Explore beginner-friendly issues](https://github.com/Danchikkl/SafePush/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22), read [CONTRIBUTING.md](CONTRIBUTING.md), or open an issue with an anonymized, **synthetic** reproduction. Never submit live keys.
+
+
 
 Example result (synthetic values; credentials never shown):
 
