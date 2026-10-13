@@ -15,8 +15,8 @@
 - Some filesystem race conditions and platform differences remain.
 - Complex ignore patterns are handled heuristically.
 - This is not a third-party penetration test or comprehensive code audit.
-- This environment could not access the npm registry to generate a verified package-lock or run npm audit. These are required before npm publication.
-- CI runs must be verified after the repository is pushed; local checks alone are not CI results.
+- A lockfile was generated on GitHub's CI runner and committed. Both npm ci and npm audit must remain green before npm publication.
+- CI runs on GitHub were verified on Node.js 20/22 prior to the reproducible-install update. Current Node.js 22/24 runs still need confirmation.
 
 ## Release checklist
 1. Generate and review package-lock.json from the npm registry; then use npm ci in CI.

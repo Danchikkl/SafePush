@@ -60,7 +60,7 @@ These paths and results are illustrative; the exact number of findings varies by
 
 ## Installation for development
 
-Requires **Node.js 20+** and Git for the Git-aware modes.
+Requires **Node.js 22+** and Git for the Git-aware modes.
 
 ```bash
 git clone https://github.com/Danchikkl/SafePush.git

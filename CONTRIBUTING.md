@@ -5,7 +5,7 @@ Thank you for helping developers ship safer apps. Beginners welcome.
 ## Local setup
 
 ```bash
-npm install
+npm ci
 npm run check
 node dist/cli.mjs scan .
 ```
