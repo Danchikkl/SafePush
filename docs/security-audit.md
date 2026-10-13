@@ -16,7 +16,7 @@
 - Complex ignore patterns are handled heuristically.
 - This is not a third-party penetration test or comprehensive code audit.
 - A lockfile was generated on GitHub's CI runner and committed. Both npm ci and npm audit must remain green before npm publication.
-- CI runs on GitHub were verified on Node.js 20/22 prior to the reproducible-install update. Current Node.js 22/24 runs still need confirmation.
+- As of 2026-10-13, GitHub CI passes with Node.js 22/24, npm ci, all 20 regression tests, npm audit, and npm pack --dry-run.
 
 ## Release checklist
 1. Generate and review package-lock.json from the npm registry; then use npm ci in CI.
