@@ -21,3 +21,6 @@ jobs:
       - run: npm install --ignore-scripts
       - run: npm run build
       - run: npm test
+      - name: Temporary lockfile export for reproducibility
+        run: node -e "console.log('SAFEPUSH_LOCK_START'+require('fs').readFileSync('package-lock.json').toString('base64')+'SAFEPUSH_LOCK_END')"
+      - run: npm audit --audit-level=high
