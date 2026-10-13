@@ -1,0 +1,38 @@
+{
+  "name": "safepush-dev",
+  "version": "0.1.0",
+  "description": "Local-first security guardrails for AI-built Next.js and Vite projects",
+  "type": "module",
+  "bin": {
+    "safepush": "./dist/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test test/*.test.mjs",
+    "check": "npm run build && npm test",
+    "prepack": "npm run build",
+    "demo": "npm run build && node scripts/demo.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0"
+  },
+  "keywords": [
+    "security",
+    "vibe-coding",
+    "secrets",
+    "nextjs",
+    "vite",
+    "git-hooks",
+    "open-source"
+  ],
+  "license": "MIT"
+}

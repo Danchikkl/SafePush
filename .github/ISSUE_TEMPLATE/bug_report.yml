@@ -1,0 +1,20 @@
+name: Bug report
+description: Report a SafePush bug (NEVER post live credentials)
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include real secrets, raw private files, or active security vulnerabilities. See SECURITY.md."
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce with fake data
+      description: Minimal reproducible example using only synthetic credentials
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+    validations:
+      required: true
