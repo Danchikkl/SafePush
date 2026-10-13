@@ -18,9 +18,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       # Lockfile generation and npm audit remain required before npm publication.
-      - run: npm install --ignore-scripts
+      - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm test
-      - name: Temporary lockfile export for reproducibility
-        run: node -e "console.log('SAFEPUSH_LOCK_START'+require('fs').readFileSync('package-lock.json').toString('base64')+'SAFEPUSH_LOCK_END')"
       - run: npm audit --audit-level=high
+      - run: npm pack --dry-run --ignore-scripts
