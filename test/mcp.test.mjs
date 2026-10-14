@@ -125,7 +125,7 @@ test('unknown methods and malformed modern metadata receive JSON-RPC errors', ()
     request(1, 'tools/list'),
     legacyInit,
     request(2, 'unknown/method'),
-    modernRequest(3, 'tools/list', { _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28' } }),
+    request(3, 'tools/list', { _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28' } }),
     modernRequest(4, 'tools/call', { name: 'other_tool', arguments: {} }),
     request(5, 'ping'),
   ]);
