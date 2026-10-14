@@ -58,6 +58,20 @@ Framework: Next.js
 
 These paths and results are illustrative; the exact number of findings varies by project.
 
+## Use SafePush with AI coding agents (MCP)
+
+SafePush now has an **experimental local MCP server** that exposes one read-only tool, `safepush_scan`, to compatible agents such as Claude Code and Codex CLI. It uses the same scanner as the CLI; it does not upload source files, validate tokens, or modify your code. The agent can request a workspace or Git-index scan but cannot choose an arbitrary scan path.
+
+After building the source checkout, register the server with your agent using an absolute path:
+
+```bash
+node /ABSOLUTE/PATH/TO/SafePush/dist/mcp.mjs --root /ABSOLUTE/PATH/TO/YOUR/PROJECT
+```
+
+This command is for MCP clients to launch; running it manually waits for protocol input. See **[Claude Code and Codex setup](docs/mcp.md)** for copyable client configuration, tests, and security boundaries.
+
+**Important:** MCP makes the tool available, but does not guarantee an agent will call it. For an automatic pre-commit check, use the separate opt-in Git hook. A clean scan is not proof of security.
+
 ## What works today
 
 | Feature | What it does |
@@ -72,6 +86,7 @@ These paths and results are illustrative; the exact number of findings varies by
 | `init --hook` | Opt-in pre-commit hook; never overwrite an existing one |
 | `scan --json` | Structured report with **no matched secret values or code snippets** |
 | `explain <RULE>` | Actionable, human-readable recovery guidance |
+| `safepush-mcp` | Experimental read-only MCP stdio adapter for coding agents (build from source) |
 
 **CLI exit codes:** `0` = no high findings; `1` = high findings (or any findings with `--strict`); `2` = CLI/scanning error. Medium warnings exit `0` by default.
 
@@ -146,7 +161,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the issue templates. Especially welco
 - **v0.1:** Local scans, Git-index scans, understandable findings, opt-in hook (implemented).
 - **v0.2:** Improved framework-specific remediation, safe preview of suggested edits, better ignore-file handling.
 - **v0.3:** Packaged GitHub Action, broader test matrix, benchmarks on opt-in / synthetic projects.
-- **Later:** Optional Claude Code / Cursor integrations, localization, contributor-contributed rule library.
+- **Agent integration:** Experimental local MCP server for Claude Code / Codex (implemented in the MCP feature branch). Hooks and broader client compatibility remain future work.
+- **Later:** Localization and contributor-contributed rule library.
 
 See [docs/launch-playbook.md](docs/launch-playbook.md) for a practical public launch plan.
 
