@@ -124,3 +124,36 @@ test('staged scan catches unchanged tracked .env',()=>sandbox(dir=>{
  const r=run(['scan','--staged','--json'],dir);assert.equal(r.status,1,r.stderr);
  assert.ok(JSON.parse(r.stdout).findings.some(f=>f.rule==='TRACKED_ENV_FILE'&&f.file==='.env'));
 }));
+
+
+// v0.2 evidence-first triage: explanations are static and contain no credential values.
+test('evidence report distinguishes pattern detection from confirmed exposure',()=>sandbox(dir=>{
+ const token=fakeGithubToken();writeFileSync(join(dir,'src.js'),'const token = "'+token+'";\n');
+ const r=run(['scan','.','--json'],dir);assert.equal(r.status,1,r.stderr);
+ const item=JSON.parse(r.stdout).findings.find(f=>f.rule==='KNOWN_SECRET');
+ assert.equal(item.priority,'high');assert.equal(item.evidence.source,'pattern');
+ assert.match(item.evidence.summary,/not tested/);assert.ok(item.verify);
+ assert.ok(!r.stdout.includes(token));
+}));
+test('staged credential pattern is prioritized urgently, without remote validation',()=>sandbox(dir=>{
+ git(['init','-q'],dir);const token=fakeGithubToken();writeFileSync(join(dir,'a.js'),'const token = "'+token+'";\n');git(['add','a.js'],dir);
+ const r=run(['scan','--staged','--json'],dir);assert.equal(r.status,1,r.stderr);
+ const item=JSON.parse(r.stdout).findings.find(f=>f.rule==='KNOWN_SECRET');
+ assert.equal(item.priority,'urgent');assert.equal(item.evidence.source,'pattern');
+ assert.ok(!r.stdout.includes(token));
+}));
+test('tracked env evidence is Git-index based and comes first in priority order',()=>sandbox(dir=>{
+ git(['init','-q'],dir);writeFileSync(join(dir,'.env'),'MODE=development\n');git(['add','-f','.env'],dir);
+ writeFileSync(join(dir,'client.js'),'console.log(import.meta.env.VITE_ADMIN_SECRET);\n');git(['add','client.js'],dir);
+ const r=run(['scan','--staged','--json'],dir);assert.equal(r.status,1,r.stderr);
+ const report=JSON.parse(r.stdout);assert.equal(report.findings[0].rule,'TRACKED_ENV_FILE');
+ assert.equal(report.findings[0].evidence.source,'git-index');
+ assert.equal(report.findings[1].priority,'review');
+}));
+test('control characters and token-shaped paths are not echoed unsanitized in evidence reports',()=>sandbox(dir=>{
+ const token=fakeGithubToken();const name='file-'+token+'\nspoof.js';writeFileSync(join(dir,name),'const token = "'+token+'";\n');
+ for(const args of [['scan','.'],['scan','.','--json']]){
+  const r=run(args,dir);assert.equal(r.status,1,r.stderr);
+  assert.ok(!r.stdout.includes(token));assert.ok(!r.stdout.includes('\nspoof.js'));
+ }
+}));
