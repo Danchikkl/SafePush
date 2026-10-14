@@ -73,6 +73,19 @@ These paths and results are illustrative; the exact number of findings varies by
 | `scan --json` | Structured report with **no matched secret values or code snippets** |
 | `explain <RULE>` | Actionable, human-readable recovery guidance |
 
+### Evidence-first triage (v0.2 preview)
+
+Each finding now includes a **priority**, the **kind of evidence** behind the warning, and a safe **manual verification step**. Staged credential-format matches and tracked `.env` files appear first; uncertain name-based heuristics remain review items.
+
+```text
+[HIGH] KNOWN_SECRET — src/config.ts:3
+  Priority: high (triage hint, not an exploitability score)
+  Evidence: A known credential-format pattern matched; validity was not tested.
+  Verify: Inspect the referenced line locally. If genuine, revoke or rotate it.
+```
+
+Use `scan --json` for the additive `priority`, `evidence`, and `verify` fields. No secret values or code snippets are included in those fields. **Priority is not proof of exploitability or confirmed exposure.** See [research notes and limitations](docs/evidence-first-v0.2.md).
+
 **CLI exit codes:** `0` = no high findings; `1` = high findings (or any findings with `--strict`); `2` = CLI/scanning error. Medium warnings exit `0` by default.
 
 ## Installation for development
