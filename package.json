@@ -4,7 +4,8 @@
   "description": "Local-first security guardrails for AI-built Next.js and Vite projects",
   "type": "module",
   "bin": {
-    "safepush": "./dist/cli.mjs"
+    "safepush": "./dist/cli.mjs",
+    "safepush-mcp": "./dist/mcp.mjs"
   },
   "engines": {
     "node": ">=22"
@@ -19,7 +20,8 @@
     "test": "node --test test/*.test.mjs",
     "check": "npm run build && npm test",
     "prepack": "npm run build",
-    "demo": "npm run build && node scripts/demo.mjs"
+    "demo": "npm run build && node scripts/demo.mjs",
+    "mcp": "node dist/mcp.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -32,7 +34,10 @@
     "nextjs",
     "vite",
     "git-hooks",
-    "open-source"
+    "open-source",
+    "mcp",
+    "claude-code",
+    "codex"
   ],
   "license": "MIT"
 }
