@@ -51,6 +51,9 @@ function summarize(result: ScanResult): void {
     const where = sanitize(f.file + (f.line ? ':' + f.line : ''));
     console.log('[' + f.severity.toUpperCase() + '] ' + f.rule + ' — ' + where);
     console.log('  ' + f.title);
+    console.log('  Priority: ' + (f.priority ?? 'review') + ' (triage hint, not an exploitability score)');
+    if (f.evidence) console.log('  Evidence: ' + f.evidence.summary);
+    if (f.verify) console.log('  Verify: ' + f.verify);
     console.log('  Why: ' + f.why);
     console.log('  Fix: ' + f.fix + '\n');
   }
