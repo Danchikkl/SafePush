@@ -1,0 +1,39 @@
+name: SafePush Security Scan
+description: Scan checked-out project files for potential credential leaks before merging
+author: SafePush contributors
+
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  strict:
+    description: Fail on medium-severity findings as well as high-severity findings
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: '22'
+    - name: Build SafePush from this action revision
+      shell: bash
+      run: |
+        npm ci --ignore-scripts --prefix "$GITHUB_ACTION_PATH"
+        npm run build --prefix "$GITHUB_ACTION_PATH"
+    - name: Scan checked-out project
+      shell: bash
+      env:
+        SAFEPUSH_STRICT: ${{ inputs.strict }}
+      run: |
+        if [[ "$SAFEPUSH_STRICT" == "true" ]]; then
+          node "$GITHUB_ACTION_PATH/dist/cli.mjs" scan "$GITHUB_WORKSPACE" --strict
+        elif [[ "$SAFEPUSH_STRICT" == "false" ]]; then
+          node "$GITHUB_ACTION_PATH/dist/cli.mjs" scan "$GITHUB_WORKSPACE"
+        else
+          echo "SafePush: strict must be true or false." >&2
+          exit 2
+        fi
