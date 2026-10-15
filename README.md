@@ -143,9 +143,10 @@ The scan is entirely local: it has **no network requests**, no credential valida
 - Detection is **pattern/heuristic based**, incomplete, and can produce false positives or false negatives.
 - Only the working tree / Git index is checked; **Git history, remote repositories, and deployed bundles are not scanned**.
 - Ignored files, symlinks, large files (over 1 MB), binary files, and known generated outputs may be skipped.
-- `NEXT_PUBLIC_` and `VITE_` aren't inherently insecure: **public IDs are often intentionally exposed**. We flag *sensitive-looking names*, not confirmed leaks.
+- `NEXT_PUBLIC_` and `VITE_` aren't inherently insecure: **public IDs are often intentionally exposed**. For example, `VITE_APP_URL`, `VITE_SUPABASE_URL`, and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` are not flagged by the current name-based rule. Names such as `VITE_ADMIN_PASSWORD` or `NEXT_PUBLIC_PRIVATE_KEY` are flagged. `NEXT_PUBLIC_FIREBASE_API_KEY` may be intentionally public yet still trigger a warning: the scanner cannot infer confidentiality from a variable name alone. Review the provider's guidance before acting.
 - No full-code analysis, dynamic analysis, dependency audit, cloud scan, or automatic rotation.
 - GitHub's secret scanning and push protection are complementary and should remain enabled.
+- Windows CI tests use Node.js 22. Windows symlink tests skip only when the runner lacks the privilege to create symlinks; this is not a claim that all Windows filesystem edge cases are covered.
 - If a real key was pushed, **revoke it even if you subsequently delete the source line**.
 
 For broader scanning, consider [Gitleaks](https://github.com/gitleaks/gitleaks), [Secretlint](https://github.com/secretlint/secretlint), and [GitHub Secret Scanning](https://docs.github.com/en/code-security/secret-scanning/introduction/about-secret-scanning). We aim to complement, not replace, those tools.

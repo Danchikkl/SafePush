@@ -31,7 +31,7 @@ const USAGE = [
 const explain: Record<string,string> = {
   KNOWN_SECRET: 'Possible exposed token. Never test someone else\'s credentials. If yours: revoke/rotate it, replace usages, and inspect Git history. Deleting one line is not enough.',
   GENERIC_SECRET_ASSIGNMENT: 'A sensitive variable appears to contain a long literal. Verify locally and, if real, revoke and move it to server-side configuration. Heuristics can be wrong.',
-  TRACKED_ENV_FILE: 'A .env file is tracked. Run git rm --cached path/to/.env and add ignore rules. Revoke anything that was already committed.',
+  TRACKED_ENV_FILE: 'A .env file is in the Git index. First, if its credentials were pushed or otherwise exposed, revoke/rotate them at the provider and update dependent services. Then add appropriate .gitignore rules and run git rm --cached -- path/to/.env to stop tracking without deleting your local file. Commit that removal. Ignoring a file never untracks it, and deleting it now does not erase old Git commits. Review history separately and seek help before rewriting shared history.',
   CLIENT_EXPOSED_SECRET_NAME: 'NEXT_PUBLIC_, VITE_, and REACT_APP_ can expose values in browser builds. Public identifiers may be fine, but server secrets must stay server-side.',
   ENV_GITIGNORE_MISSING: 'Ignore .env and .env.* except intentional templates. Run safepush init. This will not untrack files already committed.',
 };

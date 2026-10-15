@@ -10,7 +10,7 @@
  */
 import { lstatSync, realpathSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { gitRoot } from './git.mjs';
+import { gitExec, gitRoot } from './git.mjs';
 import { redactKnownSecrets } from './rules.mjs';
 import { scan } from './scanner.mjs';
 
@@ -60,7 +60,8 @@ function projectRoot(args: string[]): string {
   const root = realpathSync(resolve(args[1] ?? process.cwd()));
   if (!lstatSync(root).isDirectory()) throw new Error('Project root must be a directory.');
   const repository = gitRoot(root);
-  if (repository && realpathSync(repository) !== root) {
+  // Git provides a relative prefix even when Windows path spellings differ.
+  if (repository && String(gitExec(root, ['rev-parse', '--show-prefix'], { encoding: 'utf8' })).trim() !== '') {
     throw new Error('Use the Git repository root, not a subdirectory, to avoid scanning outside the selected path.');
   }
   return root;
