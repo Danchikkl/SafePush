@@ -72,6 +72,10 @@ This command is for MCP clients to launch; running it manually waits for protoco
 
 **Important:** MCP makes the tool available, but does not guarantee an agent will call it. For an automatic pre-commit check, use the separate opt-in Git hook. A clean scan is not proof of security.
 
+## Check pull requests with GitHub Actions
+
+SafePush also includes an **experimental read-only composite GitHub Action** to scan a checked-out repository in CI, including pull requests. It runs the same scanner as the CLI and fails on high-severity findings by default. See **[GitHub Action setup and limitations](docs/github-action.md)** for a sample workflow and security guidance. The action will be usable from `@main` after its PR is merged; pin a reviewed commit SHA for production use.
+
 ## What works today
 
 | Feature | What it does |
@@ -161,8 +165,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the issue templates. Especially welco
 
 - **v0.1:** Local scans, Git-index scans, understandable findings, opt-in hook (implemented).
 - **v0.2:** Improved framework-specific remediation, safe preview of suggested edits, better ignore-file handling.
-- **v0.3:** Packaged GitHub Action, broader test matrix, benchmarks on opt-in / synthetic projects.
-- **Agent integration:** Experimental local MCP server for Claude Code / Codex (implemented in the MCP feature branch). Hooks and broader client compatibility remain future work.
+- **v0.3:** GitHub Action (experimental implementation), broader test matrix and benchmarks on opt-in / synthetic projects.
+- **Agent integration:** Experimental local MCP server for Claude Code / Codex (in main). Agent hooks and broader client compatibility remain future work.
 - **Later:** Localization and contributor-contributed rule library.
 
 See [docs/launch-playbook.md](docs/launch-playbook.md) for a practical public launch plan.
