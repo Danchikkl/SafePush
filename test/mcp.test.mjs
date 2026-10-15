@@ -110,7 +110,7 @@ test('agents cannot override pinned project root through tool arguments', () => 
 
 test('token-shaped and control-character filenames are sanitized in MCP results', () => sandbox(root => {
   const secret = token();
-  writeFileSync(join(root, 'file-' + secret + '\nspoof.js'), 'const token="' + secret + '";\n');
+  writeFileSync(join(root, 'file-' + secret + (process.platform === 'win32' ? '' : '\nspoof') + '.js'), 'const token="' + secret + '";\n');
   const { responses, stdout } = run(root, [
     legacyInit, request(2, 'tools/call', { name: 'safepush_scan', arguments: {} }),
   ]);
