@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { gitExec, gitRoot, listGitFiles, listLocalFiles, safeFile, trackedFiles } from './git.mjs';
 import { envIgnoreMissing, finding, isEnvFile, isEnvTemplate, scanContent } from './rules.mjs';
 import type { Finding, ScanOptions, ScanResult } from './types.mjs';
+import { addEvidence, priorityOrder } from './evidence.mjs';
 
 const MAX_FILE_BYTES = 1_000_000;
 const MAX_FILES = 10_000;
@@ -77,7 +78,8 @@ export function scan(options: ScanOptions): ScanResult {
   if (options.staged && skippedLargeOrBinary > 0) {
     throw new Error('Incomplete staged scan: ' + skippedLargeOrBinary + ' oversized or binary file(s) could not be checked. Review before committing.');
   }
-  const severity = (f: Finding) => f.severity === 'high' ? 0 : 1;
-  findings.sort((a,b) => severity(a)-severity(b) || a.file.localeCompare(b.file) || (a.line ?? 0)-(b.line ?? 0));
-  return {root, mode: options.staged ? 'staged' : 'workspace', filesScanned, frameworks: frameworks(root), findings, skippedLargeOrBinary};
+  const mode = options.staged ? 'staged' : 'workspace';
+  const reviewed = findings.map(f => addEvidence(f, mode));
+  reviewed.sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority) || a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0));
+  return {root, mode, filesScanned, frameworks: frameworks(root), findings: reviewed, skippedLargeOrBinary};
 }
