@@ -1,4 +1,7 @@
 export type Severity = 'high' | 'medium';
+export type Priority = 'urgent' | 'high' | 'review';
+export type EvidenceSource = 'pattern' | 'git-index' | 'heuristic' | 'configuration';
+export interface Evidence { source: EvidenceSource; summary: string; }
 export type RuleId =
   | 'KNOWN_SECRET'
   | 'GENERIC_SECRET_ASSIGNMENT'
@@ -14,6 +17,12 @@ export interface Finding {
   title: string;
   why: string;
   fix: string;
+  /** Triage guidance, not an exploitability score. Added by the scanner. */
+  priority?: Priority;
+  /** Static, secret-free explanation of what was observed. */
+  evidence?: Evidence;
+  /** Safe manual verification step; never validates credentials remotely. */
+  verify?: string;
 }
 export interface ScanOptions {
   root: string;
