@@ -12,6 +12,10 @@ function run(args,cwd){return spawnSync(process.execPath,[executable,...args],{c
 function git(args,cwd){const p=spawnSync('git',args,{cwd,encoding:'utf8'});if(p.status)throw new Error(p.stderr);return p.stdout;}
 function sandbox(fn){const dir=mkdtempSync(join(tmpdir(),'safepush-'));try{fn(dir);}finally{rmSync(dir,{recursive:true,force:true});}}
 function fakeGithubToken(){return 'ghp_'+'A1b2C3d4E5f6G7h8I9j0'.repeat(2);}
+function symlinkOrSkip(target,link,type,t){
+ try{symlinkSync(target,link,type);return true;}
+ catch(e){if(process.platform==='win32'&&['EPERM','EACCES','ENOTSUP','UNKNOWN'].includes(e.code)){t.skip('Windows symlink privilege unavailable');return false;}throw e;}
+}
 function requireNoFile(path){try{readFileSync(path);return true;}catch(e){if(e.code==='ENOENT')return false;throw e;}}
 test('detects token without printing its value',()=>sandbox(dir=>{
  const token=fakeGithubToken();writeFileSync(join(dir,'app.js'),'const token = "'+token+'";\n');
@@ -54,10 +58,10 @@ test('existing hook is untouched',()=>sandbox(dir=>{
  assert.equal(run(['init','--hook'],dir).status,0);
  assert.equal(readFileSync(hook,'utf8'),'#!/bin/sh\necho existing\n');
 }));
-test('does not follow file symlink outside scan root',()=>sandbox(dir=>{
+test('does not follow file symlink outside scan root',t=>sandbox(dir=>{
  const outer=mkdtempSync(join(tmpdir(),'safepush-outer-'));
  try{writeFileSync(join(dir,'safe.txt'),'hello');writeFileSync(join(outer,'secret.txt'),fakeGithubToken());
- symlinkSync(join(outer,'secret.txt'),join(dir,'link.txt'));
+ if(!symlinkOrSkip(join(outer,'secret.txt'),join(dir,'link.txt'),undefined,t))return;
  const r=scan({root:dir});assert.equal(r.filesScanned,1);assert.equal(r.findings.length,0);
  }finally{rmSync(outer,{recursive:true,force:true});}
 }));
@@ -65,17 +69,17 @@ test('explain works; bad flags fail',()=>sandbox(dir=>{
  assert.equal(run(['explain','TRACKED_ENV_FILE'],dir).status,0);
  assert.equal(run(['scan','--nonsense'],dir).status,2);
 }));
-test('does not traverse symlinked directories',()=>sandbox(dir=>{
+test('does not traverse symlinked directories',t=>sandbox(dir=>{
  const outer=mkdtempSync(join(tmpdir(),'safepush-outer-'));
  try{writeFileSync(join(outer,'secret.js'),fakeGithubToken());
- symlinkSync(outer,join(dir,'linked-directory'),'dir');
+ if(!symlinkOrSkip(outer,join(dir,'linked-directory'),'dir',t))return;
  const r=scan({root:dir});assert.equal(r.filesScanned,0);assert.equal(r.findings.length,0);
  }finally{rmSync(outer,{recursive:true,force:true});}
 }));
-test('init refuses symlinked .gitignore outside root',()=>sandbox(dir=>{
+test('init refuses symlinked .gitignore outside root',t=>sandbox(dir=>{
  const outer=mkdtempSync(join(tmpdir(),'safepush-outer-'));
  try{const target=join(outer,'settings');writeFileSync(target,'PRESERVE_ME\n');
- symlinkSync(target,join(dir,'.gitignore'));assert.equal(run(['init'],dir).status,2);
+ if(!symlinkOrSkip(target,join(dir,'.gitignore'),undefined,t))return;assert.equal(run(['init'],dir).status,2);
  assert.equal(readFileSync(target,'utf8'),'PRESERVE_ME\n');
  }finally{rmSync(outer,{recursive:true,force:true});}
 }));
@@ -98,12 +102,12 @@ test('token-shaped filenames are redacted in both reports',()=>sandbox(dir=>{
  for(const flags of [[],['--json']]){const r=run(['scan',...flags],dir);
  assert.equal(r.status,1);assert.ok(!r.stdout.includes(token));assert.ok(r.stdout.includes('[REDACTED]'));}
 }));
-test('symlinked metadata is not read from outside root',()=>sandbox(dir=>{
+test('symlinked metadata is not read from outside root',t=>sandbox(dir=>{
  const outer=mkdtempSync(join(tmpdir(),'safepush-foreign-'));
  try{writeFileSync(join(outer,'package.json'),JSON.stringify({dependencies:{next:'15.0.0'}}));
  writeFileSync(join(outer,'.gitignore'),'.env\n.env.*\n');
- symlinkSync(join(outer,'package.json'),join(dir,'package.json'));
- symlinkSync(join(outer,'.gitignore'),join(dir,'.gitignore'));
+ if(!symlinkOrSkip(join(outer,'package.json'),join(dir,'package.json'),undefined,t))return;
+ if(!symlinkOrSkip(join(outer,'.gitignore'),join(dir,'.gitignore'),undefined,t))return;
  const r=scan({root:dir});assert.deepEqual(r.frameworks,[]);assert.equal(r.filesScanned,0);
  }finally{rmSync(outer,{recursive:true,force:true});}
 }));
@@ -123,4 +127,27 @@ test('staged scan catches unchanged tracked .env',()=>sandbox(dir=>{
  writeFileSync(join(dir,'safe.js'),'export const ok=true;\n');git(['add','safe.js'],dir);
  const r=run(['scan','--staged','--json'],dir);assert.equal(r.status,1,r.stderr);
  assert.ok(JSON.parse(r.stdout).findings.some(f=>f.rule==='TRACKED_ENV_FILE'&&f.file==='.env'));
+}));
+
+test('public identifiers are not flagged, secret-looking client names still warn',()=>sandbox(dir=>{
+ writeFileSync(join(dir,'web.ts'),[
+   'const origin=import.meta.env.VITE_APP_URL;',
+   'const supabase=import.meta.env.VITE_SUPABASE_URL;',
+   'const publicId=process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;',
+   'const password=import.meta.env.VITE_ADMIN_PASSWORD;',
+   'const privateKey=process.env.NEXT_PUBLIC_PRIVATE_KEY;'
+ ].join('\\n'));
+ const findings=scan({root:dir}).findings.filter(f=>f.rule==='CLIENT_EXPOSED_SECRET_NAME');
+ assert.deepEqual(findings.map(f=>f.line),[4,5]);
+}));
+test('tracked env recovery instructions mention rotation and local-file retention',()=>sandbox(dir=>{
+ git(['init','-q'],dir);
+ writeFileSync(join(dir,'.env'),'MODE=fixture\\n');git(['add','-f','.env'],dir);
+ const warn=scan({root:dir}).findings.find(f=>f.rule==='TRACKED_ENV_FILE');
+ assert.ok(warn);assert.match(warn.fix,/rotate/i);assert.match(warn.fix,/without deleting/i);
+ const explain=run(['explain','TRACKED_ENV_FILE'],dir);
+ assert.equal(explain.status,0,explain.stderr);
+ assert.match(explain.stdout,/pushed or otherwise exposed/);
+ assert.match(explain.stdout,/git rm --cached --/);
+ assert.match(explain.stdout,/old Git commits/);
 }));
