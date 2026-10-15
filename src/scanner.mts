@@ -61,7 +61,7 @@ export function scan(options: ScanOptions): ScanResult {
       findings.push(finding('TRACKED_ENV_FILE', 'high', relativeFile, undefined,
         'Environment file is present in the Git index',
         'A non-template .env file is tracked or staged in Git, potentially exposing its contents.',
-        'Stop tracking with git rm --cached <filename>, add an ignore rule, and rotate credentials if already committed.'));
+        'If pushed or exposed, revoke/rotate credentials first. Add .gitignore rules, then use git rm --cached -- <filename> to stop tracking without deleting the local file. Old commits still contain the file.'));
     }
   }
   if (!options.staged && safeFile(root, 'package.json')) {
