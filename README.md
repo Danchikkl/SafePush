@@ -72,6 +72,10 @@ This command is for MCP clients to launch; running it manually waits for protoco
 
 **Important:** MCP makes the tool available, but does not guarantee an agent will call it. For an automatic pre-commit check, use the separate opt-in Git hook. A clean scan is not proof of security.
 
+## Evidence-first triage (v0.2 preview)
+
+Every finding now includes `priority` (`urgent`, `high`, or `review`), a **fixed, secret-free** `evidence` description, and manual `verify` guidance. Priorities help decide what to investigate first, **not** whether credentials are genuine or exploitable. JSON fields are additive; exit codes and severities are unchanged. See [design notes and limitations](docs/evidence-first-v0.2.md).
+
 ## Check pull requests with GitHub Actions
 
 SafePush also includes an **experimental read-only composite GitHub Action** to scan a checked-out repository in CI, including pull requests. It runs the same scanner as the CLI and fails on high-severity findings by default. See **[GitHub Action setup and limitations](docs/github-action.md)** for a sample workflow and security guidance. The action will be usable from `@main` after its PR is merged; pin a reviewed commit SHA for production use.
@@ -89,6 +93,7 @@ SafePush also includes an **experimental read-only composite GitHub Action** to 
 | `init` | Add common `.env` patterns to `.gitignore` without replacing unrelated rules |
 | `init --hook` | Opt-in pre-commit hook; never overwrite an existing one |
 | `scan --json` | Structured report with **no matched secret values or code snippets** |
+| Evidence-first triage | Deterministic priority, provenance and safe manual verification hints |
 | `explain <RULE>` | Actionable, human-readable recovery guidance |
 | `safepush-mcp` | Experimental read-only MCP stdio adapter for coding agents (build from source) |
 
