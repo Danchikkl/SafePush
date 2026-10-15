@@ -136,13 +136,13 @@ test('public identifiers are not flagged, secret-looking client names still warn
    'const publicId=process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;',
    'const password=import.meta.env.VITE_ADMIN_PASSWORD;',
    'const privateKey=process.env.NEXT_PUBLIC_PRIVATE_KEY;'
- ].join('\\n'));
+ ].join('\n'));
  const findings=scan({root:dir}).findings.filter(f=>f.rule==='CLIENT_EXPOSED_SECRET_NAME');
  assert.deepEqual(findings.map(f=>f.line),[4,5]);
 }));
 test('tracked env recovery instructions mention rotation and local-file retention',()=>sandbox(dir=>{
  git(['init','-q'],dir);
- writeFileSync(join(dir,'.env'),'MODE=fixture\\n');git(['add','-f','.env'],dir);
+ writeFileSync(join(dir,'.env'),'MODE=fixture\n');git(['add','-f','.env'],dir);
  const warn=scan({root:dir}).findings.find(f=>f.rule==='TRACKED_ENV_FILE');
  assert.ok(warn);assert.match(warn.fix,/rotate/i);assert.match(warn.fix,/without deleting/i);
  const explain=run(['explain','TRACKED_ENV_FILE'],dir);
