@@ -44,7 +44,7 @@ function isRequest(x: unknown): x is Request {
       typeof obj.id === 'number' && Number.isSafeInteger(obj.id)) &&
     obj.operation === 'mock_complete' &&
     typeof obj.prompt === 'string' && obj.prompt.length > 0 && obj.prompt.length <= INPUT_LIMIT &&
-    Number.isInteger(obj.max_output_tokens) &&
+    typeof obj.max_output_tokens === 'number' && Number.isInteger(obj.max_output_tokens) &&
     (obj.max_output_tokens as number) >= 1 && (obj.max_output_tokens as number) <= MAX_OUTPUT;
 }
 function send(x: Record<string, unknown>): void {
