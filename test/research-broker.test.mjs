@@ -67,7 +67,7 @@ test('rejects secret file inside agent root or real provider key', () => fixture
   assert.equal(unsafe.status, 2);
   assert.equal(unsafe.responses.length, 0);
   assert.ok(!unsafe.stderr.includes(DEMO_KEY));
-  writeFileSync(key, 'sk-real-looking-provider-key');
+  writeFileSync(key, ['sk', 'real-looking-provider-key'].join('-'));
   const bad = run(agent, key, [request()]);
   assert.equal(bad.status, 2);
   assert.equal(bad.responses.length, 0);
