@@ -6,6 +6,29 @@
 
 Build a separate security layer for AI coding agents. Agent-controlled code and tool execution must not have access to long-lived credentials. A separate trusted process is the only owner of secrets. Never claim that regex/hooks alone enforce confidentiality.
 
+## Implemented v0: synthetic broker (research, not production)
+
+`src/research-broker.mts` implements a **single-process, local JSON-lines request/response mock**. It reads a *synthetic-only* key from a file outside the configured agent project, accepts only the `mock_complete` operation, rejects arbitrary URLs/operation names, and never echoes the credential or prompt. It reserves the maximum calculated mock cost before processing, limits output tokens and session calls, and reconciles the synthetic charge afterward.
+
+**Important:** Placing a file outside a workspace does **not** make it private if the agent has the same operating-system permissions. This is an interface/budget prototype, not an isolated runtime. No actual API calls, no billable activity, no trusted secret storage, no network controls, and no durable or multi-process budget guarantees are provided.
+
+Try it with a dedicated temporary project directory and a separate *fake* key file (never use live keys):
+
+```sh
+npm ci --ignore-scripts
+npm run build
+mkdir -p /tmp/safepush-agent
+printf 'SAFEPUSH_TEST_KEY_SYNTHETIC1234567890\n' > /tmp/safepush-broker-demo-key
+printf '%s\n' '{"id":1,"operation":"mock_complete","prompt":"Explain this snippet","max_output_tokens":12}' | \
+  node dist/research-broker.mjs --agent-root /tmp/safepush-agent --secret-file /tmp/safepush-broker-demo-key
+```
+
+Synthetic cost formula: input units = ceil(UTF-8 prompt bytes / 4), charged at 2 synthetic accounting units; maximum output tokens charged at 3 units each during admission. Session budget = 1000 units, maximum calls = 10, maximum output = 64 tokens. These **are not dollars, accurate provider token counts, or real prices**. The mock response is static and does not contain the prompt or credential.
+
+Test using `npm run check`; the synthetic broker tests verify bounded calls, budget exhaustion, refused passthrough, malformed inputs, and secret location checks.
+
+**Next crucial stage:** run the agent under an independent OS/container identity with no access to the key file, no inherited secrets, and network egress disabled except an authenticated, narrow broker transport. Replace single-process counters with durable, atomic reservations before introducing concurrency or billable provider calls.
+
 ## Architecture sketch
 
 ```text
