@@ -63,3 +63,11 @@ test('denies malformed hook input and never echoes it', () => sandbox(root => {
   assert.ok(!r.stdout.includes('secret-do-not-echo'));
   denied(JSON.parse(r.stdout));
 }));
+
+test('denies reading a normally named source file containing a synthetic credential', () => sandbox(root => {
+  const synthetic = 'ghp_' + 'A1b2C3d4E5f6G7h8I9j0'.repeat(2);
+  writeFileSync(join(root, 'config.js'), 'const token = "' + synthetic + '";\n');
+  const response = gate(root, 'Read', { file_path: join(root, 'config.js') });
+  denied(response);
+  assert.ok(!JSON.stringify(response).includes(synthetic));
+}));
