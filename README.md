@@ -80,6 +80,10 @@ Every finding now includes `priority` (`urgent`, `high`, or `review`), a **fixed
 
 SafePush also includes an **experimental read-only composite GitHub Action** to scan a checked-out repository in CI, including pull requests. It runs the same scanner as the CLI and fails on high-severity findings by default. See **[GitHub Action setup and limitations](docs/github-action.md)** for a sample workflow and security guidance. The action will be usable from `@main` after its PR is merged; pin a reviewed commit SHA for production use.
 
+## Experimental AI agent read guard
+
+An opt-in **strict Claude Code PreToolUse hook prototype** can deny access to sensitive file paths and block unsafe tool categories before execution. It intentionally disables terminal/search/subagent tools and does **not** provide OS-level secrecy or protect hardcoded secrets in otherwise readable files. **Do not rely on it to hide live credentials from a powerful agent.** For setup, tests, and the security threat model, see [Agent Guard research preview](docs/agent-guard.md). Real isolation and secret-broker support remain research work.
+
 ## What works today
 
 | Feature | What it does |
