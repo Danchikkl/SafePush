@@ -2,7 +2,7 @@
 
 **Security status: research prototype. This hook is NOT a secrets vault, OS sandbox, or proven prevention of agent exfiltration.**
 
-This opt-in Claude Code `PreToolUse` gate enforces a **strict allowlist** on tool calls that pass through the hook. It permits only built-in `Read`, `Write`, `Edit`, and `MultiEdit` for regular project files. It denies sensitive paths (`.env*`, `.ssh/`, `.aws/`, `.git/`, private-key formats, credential files), paths outside the selected project, symlink escapes, all terminal commands (`Bash`), search tools (`Grep` / `Glob`), delegation, and unknown/MCP tools. It fails closed on malformed input and emits only fixed denial messages.
+This opt-in Claude Code `PreToolUse` gate enforces a **strict allowlist** on tool calls that pass through the hook. It permits only built-in `Read`, `Write`, `Edit`, and `MultiEdit` for regular project files. Before a Read, it also rejects files with credential-like content detected by existing SafePush rules, or unreadable/oversized/binary files. It denies sensitive paths (`.env*`, `.ssh/`, `.aws/`, `.git/`, private-key formats, credential files), paths outside the selected project, symlink escapes, all terminal commands (`Bash`), search tools (`Grep` / `Glob`), delegation, and unknown/MCP tools. It fails closed on malformed input and emits only fixed denial messages.
 
 The strong restrictions are intentional: arbitrary shell commands or an alternative tool would otherwise bypass file-read rules. The policy will seriously limit normal coding and testing tasks. Use it only to evaluate compatibility with **synthetic secrets**.
 
@@ -42,7 +42,7 @@ The process running the hook can read local paths to validate them but does not 
 ## Boundaries and limitations
 
 - This is **tool interception, not file isolation**. An agent with other execution channels, uncontrolled plugins, access to processes holding secrets, or control of the hook configuration can bypass it.
-- Readable source files may themselves contain hardcoded credentials; this prototype does **not** inspect or redact allowed file contents before Claude receives them. Run `safepush scan` independently.
+- The guard runs SafePush's limited pattern/heuristic checks before a Read, but **undetected or obfuscated secrets can still appear in allowed file contents**. The guard never rewrites or safely redacts a tool response. Run `safepush scan` independently.
 - Git, shell, searches, notebooks, subagents and MCP are denied, even when harmless. That is a deliberate limitation, not a general developer experience.
 - A malicious or confused agent might introduce code that leaks secrets when a human later runs it. Human review and CI checks remain essential.
 - File-system races and exotic paths/aliases are not comprehensively resolved. This is not evaluated as an adversarial sandbox.
