@@ -7,7 +7,8 @@
  * Never echo input, paths, credentials, or error details.
  */
 import { readFileSync, realpathSync, lstatSync } from 'node:fs';
-import { isAbsolute, relative, resolve, sep, basename } from 'node:path';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { scanContent } from './rules.mjs';
 
 const MAX_BYTES = 64 * 1024;
 type Obj = Record<string, unknown>;
@@ -67,7 +68,16 @@ function decision(root: string, data: unknown): boolean {
   // No terminal, search, notebooks, subagents or MCP tools: they can read or disclose secrets.
   if (!['Read', 'Write', 'Edit', 'MultiEdit'].includes(name)) return false;
   const path = input.file_path;
-  if (name === 'Read') return allowedPath(root, path, true);
+  if (name === 'Read') {
+    if (!allowedPath(root, path, true)) return false;
+    try {
+      const file = resolve(root, path as string);
+      const contents = readFileSync(file);
+      if (contents.length > 1_000_000 || contents.includes(0)) return false;
+      const findings = scanContent(file, contents.toString('utf8'));
+      return !findings.some(f => f.rule === 'KNOWN_SECRET' || f.rule === 'GENERIC_SECRET_ASSIGNMENT');
+    } catch { return false; }
+  }
   if (name === 'Edit' || name === 'MultiEdit') return allowedPath(root, path, true);
   return allowedPath(root, path, false);
 }
