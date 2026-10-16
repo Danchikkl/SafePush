@@ -7,7 +7,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const exe = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist', 'research-broker.mjs');
-const DEMO_KEY = 'SAFEPUSH_TEST_KEY_NOT_A_REAL_KEY_123456';
+const DEMO_KEY = 'SAFEPUSH_TEST_KEY_SYNTHETIC1234567890';
 function fixture(fn) {
   const dir = mkdtempSync(join(tmpdir(), 'safepush-broker-'));
   const agent = join(dir, 'agent');
