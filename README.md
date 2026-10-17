@@ -80,6 +80,10 @@ Every finding now includes `priority` (`urgent`, `high`, or `review`), a **fixed
 
 SafePush also includes an **experimental read-only composite GitHub Action** to scan a checked-out repository in CI, including pull requests. It runs the same scanner as the CLI and fails on high-severity findings by default. See **[GitHub Action setup and limitations](docs/github-action.md)** for a sample workflow and security guidance. The action will be usable from `@main` after its PR is merged; pin a reviewed commit SHA for production use.
 
+## Research: Isolated Agent + Secret Broker
+
+In the separate `research/isolated-agent-security` branch, an **experimental synthetic-only request/response broker** explores narrow operations and bounded usage accounting. It does not call real APIs or provide OS isolation. See [research design, demo and limitations](docs/agent-security-research.md). Never give it real credentials; keeping a secret file outside an agent's working directory alone is not an access-control boundary.
+
 ## What works today
 
 | Feature | What it does |
