@@ -36,7 +36,7 @@ export function validateRequest(input: unknown, policy: BudgetPolicy = DEFAULT_P
 }
 export function maximumCost(call: AuthorizedCall): number {
   // Deliberately pessimistic *mock* estimate, not an actual tokenizer.
-  return Buffer.byteLength(call.prompt, 'utf8') * 2 + call.max_output_tokens * 3;
+  return Math.ceil(Buffer.byteLength(call.prompt, 'utf8') / 4) * 2 + call.max_output_tokens * 3;
 }
 export class BudgetGovernor {
   private remaining: number;
