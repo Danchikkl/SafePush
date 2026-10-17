@@ -29,6 +29,14 @@ Test using `npm run check`; the synthetic broker tests verify bounded calls, bud
 
 **Next crucial stage:** run the agent under an independent OS/container identity with no access to the key file, no inherited secrets, and network egress disabled except an authenticated, narrow broker transport. Replace single-process counters with durable, atomic reservations before introducing concurrency or billable provider calls.
 
+## Validated security building blocks integrated into prototype
+
+The broker now uses a small, explicit **capability allowlist** (`src/research-policy.mts`) and an admission-control **budget invariant**, rather than a speculative risk score. Requests are validated against a fixed operation schema; unknown operations, URLs, headers, or excessive output are rejected.
+
+For every admitted mock request, its worst-case *synthetic* cost is reserved synchronously before dispatch. Outstanding reservations reduce available units; a successful settlement returns only the unused allocation; a provider failure with uncertain billing forfeits the full reservation. Invalid settlements, repeated settlements and exceeding the per-session call count are denied. Synthetic regression tests cover concurrent reservations within a single process, Unicode byte limits, refund abuse, and call exhaustion.
+
+This approach uses standard security engineering principles (least privilege, complete mediation, fail-closed admission and resource quotas). **It is not mathematical proof of noninterference or a production billing guarantee.** External providers may bill differently, reserve/settle is only single-process/in-memory, and the agent is not yet sandboxed. CUSUM and queueing models are deliberately deferred until we have measured normal operation and a real source of usage data.
+
 ## Architecture sketch
 
 ```text
