@@ -72,6 +72,10 @@ This command is for MCP clients to launch; running it manually waits for protoco
 
 **Important:** MCP makes the tool available, but does not guarantee an agent will call it. For an automatic pre-commit check, use the separate opt-in Git hook. A clean scan is not proof of security.
 
+### Third-party MCP directory listing
+
+SafePush has been [listed in the M8ven MCP Trust Index](https://m8ven.ai/mcp/danchikkl/safepush), a third-party directory of MCP servers. **A directory listing alone does not mean SafePush is certified, endorsed, security-audited, or a verified publisher.** Refer to M8ven's listing for its current assessment and verification status.
+
 ## Evidence-first triage (v0.2 preview)
 
 Every finding now includes `priority` (`urgent`, `high`, or `review`), a **fixed, secret-free** `evidence` description, and manual `verify` guidance. Priorities help decide what to investigate first, **not** whether credentials are genuine or exploitable. JSON fields are additive; exit codes and severities are unchanged. See [design notes and limitations](docs/evidence-first-v0.2.md).
