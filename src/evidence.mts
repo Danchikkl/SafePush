@@ -33,7 +33,7 @@ export function addEvidence(finding: Finding, mode: 'staged' | 'workspace'): Fin
   const observation = observations[finding.rule];
   let priority: Priority = 'review';
   if (finding.rule === 'TRACKED_ENV_FILE') priority = 'urgent';
-  else if (finding.rule === 'KNOWN_SECRET') priority = mode === 'staged' ? 'urgent' : 'high';
+  else if (finding.rule === 'KNOWN_SECRET' && finding.severity === 'high') priority = mode === 'staged' ? 'urgent' : 'high';
   return { ...finding, priority, evidence: { ...observation.evidence }, verify: observation.verify };
 }
 

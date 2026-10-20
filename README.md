@@ -72,6 +72,10 @@ This command is for MCP clients to launch; running it manually waits for protoco
 
 **Important:** MCP makes the tool available, but does not guarantee an agent will call it. For an automatic pre-commit check, use the separate opt-in Git hook. A clean scan is not proof of security.
 
+### Claude Code hooks (experimental, opt-in)
+
+To check every write and commit **without relying on the agent to call a tool**, SafePush can run as a Claude Code `PreToolUse` hook: `safepush hook claude`. It blocks writing known credential formats into source files, asks before heuristic findings or committable `.env` files, blocks `git commit` with high-severity staged findings, and blocks `git commit --no-verify`. It is **not enabled automatically**; you add it to your own Claude Code settings. See **[Claude Code hooks](docs/claude-code-hooks.md)** for setup and limitations.
+
 ### Third-party MCP directory listing
 
 SafePush has been [listed in the M8ven MCP Trust Index](https://m8ven.ai/mcp/danchikkl/safepush), a third-party directory of MCP servers. **A directory listing alone does not mean SafePush is certified, endorsed, security-audited, or a verified publisher.** Refer to M8ven's listing for its current assessment and verification status.
@@ -90,8 +94,8 @@ SafePush also includes an **experimental read-only composite GitHub Action** to 
 |---|---|
 | `scan .` | Scan Git-tracked and untracked, non-ignored local text files |
 | `scan --staged` | Scan **the Git index**, not potentially different working-tree contents |
-| Known token patterns | Detect a small set of GitHub, OpenAI-style, Stripe, and Slack token formats |
-| Generic credential heuristic | Flag some suspicious assignments, clearly labeled as uncertain |
+| Known token patterns | Detect a small set of GitHub, OpenAI-style, Anthropic, Stripe (secret and restricted), Slack, AWS access key ID and private-key-block formats; Google API keys as medium |
+| Generic credential heuristic | Flag some suspicious assignments (`OPENAI_API_KEY = "…"`, `apiKey: '…'`, JSON keys, passwords inside DB URLs), clearly labeled as uncertain |
 | Client-exposed environment variables | Warn about sensitive names beginning with `NEXT_PUBLIC_`, `VITE_`, and `REACT_APP_` |
 | Tracked `.env` detection | Warn if a non-template env file is tracked or staged |
 | `init` | Add common `.env` patterns to `.gitignore` without replacing unrelated rules |
@@ -100,6 +104,7 @@ SafePush also includes an **experimental read-only composite GitHub Action** to 
 | Evidence-first triage | Deterministic priority, provenance and safe manual verification hints |
 | `explain <RULE>` | Actionable, human-readable recovery guidance |
 | `safepush-mcp` | Experimental read-only MCP stdio adapter for coding agents (build from source) |
+| `hook claude` | Experimental opt-in Claude Code `PreToolUse` hook adapter (not enabled automatically) |
 
 **CLI exit codes:** `0` = no high findings; `1` = high findings (or any findings with `--strict`); `2` = CLI/scanning error. Medium warnings exit `0` by default.
 
@@ -175,7 +180,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) and the issue templates. Especially welco
 - **v0.1:** Local scans, Git-index scans, understandable findings, opt-in hook (implemented).
 - **v0.2:** Improved framework-specific remediation, safe preview of suggested edits, better ignore-file handling.
 - **v0.3:** GitHub Action (experimental implementation), broader test matrix and benchmarks on opt-in / synthetic projects.
-- **Agent integration:** Experimental local MCP server for Claude Code / Codex (in main). Agent hooks and broader client compatibility remain future work.
+- **Agent integration:** Experimental local MCP server for Claude Code / Codex (in main). Experimental opt-in Claude Code hook adapter (`safepush hook claude`). Hooks for other agents and broader client compatibility remain future work.
 - **Later:** Localization and contributor-contributed rule library.
 
 See [docs/launch-playbook.md](docs/launch-playbook.md) for a practical public launch plan.
