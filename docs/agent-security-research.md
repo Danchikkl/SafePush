@@ -27,7 +27,7 @@ Synthetic cost formula: input units = ceil(UTF-8 prompt bytes / 4), charged at 2
 
 Test using `npm run check`; the synthetic broker tests verify bounded calls, budget exhaustion, refused passthrough, malformed inputs, and secret location checks.
 
-**Next crucial stage:** run the agent under an independent OS/container identity with no access to the key file, no inherited secrets, and network egress disabled except an authenticated, narrow broker transport. Replace single-process counters with durable, atomic reservations before introducing concurrency or billable provider calls.
+**Next crucial stage:** validate the optional Docker proof with live container tooling, test stronger transport authenticity and agent-client integration, and replace single-process counters with durable, atomic reservations before introducing multiple broker instances or billable provider calls.
 
 ## Validated security building blocks integrated into prototype
 
@@ -36,6 +36,24 @@ The broker now uses a small, explicit **capability allowlist** (`src/research-po
 For every admitted mock request, its worst-case *synthetic* cost is reserved synchronously before dispatch. Outstanding reservations reduce available units; a successful settlement returns only the unused allocation; a provider failure with uncertain billing forfeits the full reservation. Invalid settlements, repeated settlements and exceeding the per-session call count are denied. Synthetic regression tests cover concurrent reservations within a single process, Unicode byte limits, refund abuse, and call exhaustion.
 
 This approach uses standard security engineering principles (least privilege, complete mediation, fail-closed admission and resource quotas). **It is not mathematical proof of noninterference or a production billing guarantee.** External providers may bill differently, reserve/settle is only single-process/in-memory, and the agent is not yet sandboxed. CUSUM and queueing models are deliberately deferred until we have measured normal operation and a real source of usage data.
+
+## Experimental isolation demo — Docker Compose
+
+An optional **synthetic-only** HTTP broker now demonstrates separation of the agent from a mock provider credential. It is implemented in `src/research-http-broker.mts`, with an isolated network demo in `research/compose.yaml`.
+
+```sh
+# Requires Docker Engine and Docker Compose; no real API keys or provider network calls.
+docker compose -f research/compose.yaml up --build --abort-on-container-exit --exit-code-from agent
+docker compose -f research/compose.yaml down
+```
+
+The Compose demo uses an `internal: true` network with **no published host ports**. The untrusted `agent` service runs as a non-root user, with a read-only filesystem, all Linux capabilities dropped, no-new-privileges, and resource limits. The mock provider key is mounted into the **broker container only**. The agent receives a separate, deliberately limited **synthetic capability credential** to call the broker; this credential is not a provider API key. The agent client checks that the mock provider-key mount is absent and that the broker refuses an unapproved action.
+
+The broker's only HTTP endpoint is `POST /v1/mock-complete`: it rejects unknown paths, HTTP methods, arbitrary URLs, unknown operation fields, unauthorized calls, oversized JSON requests and exhausted budgets. A shared in-memory `BudgetGovernor` mediates each request **within a single broker process**, including concurrent HTTP requests. Only hardcoded synthetic responses are returned; no outbound provider calls exist. Non-loopback binding requires explicit `SAFEPUSH_RESEARCH_CONTAINER_ONLY=1` opt-in.
+
+**Important limits:** Docker must be installed, configured and running properly. This demo is **not independently attested** and is not tested automatically in standard Node/Windows CI. The agent is a tiny demonstration script, not Claude/Codex itself. Shared demo capability and mock provider fixtures are publicly committed for reproduction and are NOT private. Internal Docker networking is not authenticated encryption; a different compromised container on that network could attack the interface. A scoped caller credential permits authorized requests up to the shared budget. This design does not defend against Docker host compromise, kernel/container escapes, privileged Docker access, malware in the trusted broker, or production provider-billing uncertainties. Never put live credentials in research fixtures.
+
+For a real deployment, require independent OS/container trust boundaries, separately provisioned per-user capabilities, TLS/authenticated transport where appropriate, restricted outbound networking at the OS level, durable atomic per-tenant budget reservations, provider allowlists, short-lived credentials, and an adversarial security review.
 
 ## Architecture sketch
 
