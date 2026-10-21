@@ -29,7 +29,7 @@ const TOOL = {
     properties: { staged: { type: 'boolean', description: 'Check staged Git index content instead of workspace files.' } },
     additionalProperties: false,
   },
-  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
 };
 
 type JsonObject = Record<string, unknown>;

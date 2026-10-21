@@ -53,7 +53,7 @@ test('legacy initialize, list and call: only JSON-RPC on stdout; no token values
   assert.equal(responses[0].result.protocolVersion, '2025-11-25');
   assert.equal(responses[1].result.tools.length, 1);
   assert.equal(responses[1].result.tools[0].name, 'safepush_scan');
-  assert.equal(responses[1].result.tools[0].annotations.readOnlyHint, true);
+  assert.deepEqual(responses[1].result.tools[0].annotations, { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
   assert.ok(payload(responses[2]).findings.some(f => f.rule === 'KNOWN_SECRET'));
   assert.equal(responses[2].result.isError, false);
   assert.ok(!stdout.includes(secret));
