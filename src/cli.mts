@@ -120,13 +120,13 @@ function addHook(path: string): void {
 }
 const MAX_HOOK_INPUT = 16 * 1024 * 1024;
 function runClaudeHook(): number {
-  // Malformed input exits 1: Claude Code shows a non-blocking hook error and continues.
-  // That is deliberate; a broken hook must not silently lock users out of their agent.
+  // This opt-in security hook blocks if its input cannot be checked.
+  // Claude Code treats exit code 2 as a blocking hook error.
   const raw = readFileSync(0);
-  if (raw.length > MAX_HOOK_INPUT) { console.error('SafePush hook: input too large; not checked.'); return 1; }
+  if (raw.length > MAX_HOOK_INPUT) { console.error('SafePush hook blocked: input too large; not checked.'); return 2; }
   let event: unknown;
   try { event = JSON.parse(raw.toString('utf8')); }
-  catch { console.error('SafePush hook: invalid JSON input; not checked.'); return 1; }
+  catch { console.error('SafePush hook blocked: invalid JSON input; not checked.'); return 2; }
   const out = hookOutput(evaluateClaudeHook(event));
   if (out) process.stdout.write(out + '\n');
   return 0;

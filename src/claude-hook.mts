@@ -13,7 +13,7 @@
  *   file that Git would not ignore, or a scan that could not complete.
  * - null: no opinion; Claude Code continues with its normal permission flow.
  */
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { basename, isAbsolute, relative, resolve, sep } from 'node:path';
 import { gitExec, gitRoot } from './git.mjs';
 import { isEnvFile, isEnvTemplate, redactKnownSecrets, scanContent } from './rules.mjs';
 import { scan } from './scanner.mjs';
@@ -39,6 +39,48 @@ function displayPath(cwd: string, file: string): string {
   const rel = relative(cwd, abs);
   const inside = rel && rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel);
   return clean((inside ? rel : abs).replaceAll('\\', '/'));
+}
+function isSensitiveReadPath(cwd: string, file: string): boolean {
+  const abs = resolve(cwd, file);
+  if (isEnvFile(abs)) return !isEnvTemplate(abs);
+  const name = basename(abs).toLowerCase();
+  return /^(?:id_(?:rsa|ed25519|ecdsa|dsa)|\.npmrc|\.netrc|\.pypirc|credentials(?:\.json)?|secrets\.json|application_default_credentials\.json)$/.test(name)
+    || /\.(?:pem|key|p12|pfx)$/i.test(name);
+}
+
+function mentionsSensitiveFile(text: string): boolean {
+  const envNames = [...text.matchAll(/\.env(?:\.[A-Za-z0-9_-]+)?/gi)].map(match => match[0]);
+  if (envNames.some(name => isEnvFile(name) && !isEnvTemplate(name))) return true;
+  return /(?:^|[\/\s"'=])(?:id_(?:rsa|ed25519|ecdsa|dsa)|\.npmrc|\.netrc|\.pypirc|credentials(?:\.json)?|secrets\.json|application_default_credentials\.json)(?=$|[\s"';&|<>\/\\])/i.test(text)
+    || /\.(?:pem|key|p12|pfx)\b/i.test(text);
+}
+
+function checkSensitiveRead(tool: string, cwd: string, input: Json): HookDecision {
+  if (tool === 'Read') {
+    const file = str(input.file_path) ?? str(input.notebook_path);
+    if (file && isSensitiveReadPath(cwd, file)) {
+      return { decision: 'deny', reason:
+        'SafePush blocked direct reading of a likely secret file (' + displayPath(cwd, file) + '). ' +
+        'Do not expose secret values to the agent; use a narrowly scoped tool or secret broker that returns only the required result.' };
+    }
+  }
+  if (tool === 'Grep') {
+    const file = str(input.path);
+    const glob = str(input.glob);
+    if ((file && isSensitiveReadPath(cwd, file)) || (glob && mentionsSensitiveFile(glob))) {
+      return { decision: 'deny', reason:
+        'SafePush blocked a search that directly targets a likely secret file. Search source code or a redacted copy instead; do not expose secret values to the agent.' };
+    }
+  }
+  return null;
+}
+
+function checkSensitiveShellRead(command: string): HookDecision {
+  if (!mentionsSensitiveFile(command)) return null;
+  const readsOrCopies = /\b(?:cat|less|more|head|tail|sed|awk|grep|egrep|fgrep|rg|cut|sort|uniq|wc|strings|base64|xxd|od|hexdump|source|cp|mv|install|tar|zip|gzip|python(?:[0-9]+)?|node|perl|ruby|php|jq|yq)\b|\bgit\s+(?:show|cat-file|diff|log)\b|(?:^|[;&|]\s*)\.\s+\S/i;
+  if (!readsOrCopies.test(command)) return null;
+  return { decision: 'deny', reason:
+    'SafePush blocked a shell command that may read or copy a secret file. Use an approved secret broker or a tool that returns only the required operation result. This check is textual and cannot detect indirect reads through arbitrary scripts.' };
 }
 function list(findings: Finding[], withLines: boolean): string {
   const lines = findings.slice(0, MAX_LISTED).map(f =>
@@ -124,6 +166,8 @@ function checkWrite(cwd: string, file: string, text: string, partial: boolean): 
 const commitPattern = /\bgit\b((?:\s+-(?:C|c)\s+\S+)*)\s+commit\b([^\n]*)/;
 
 function checkBash(cwd: string, command: string): HookDecision {
+  const sensitiveRead = checkSensitiveShellRead(command);
+  if (sensitiveRead) return sensitiveRead;
   for (const segment of command.split(/&&|\|\||[;|\n]/)) {
     const match = commitPattern.exec(segment);
     if (!match) continue;
@@ -178,6 +222,8 @@ export function evaluateClaudeHook(event: unknown, fallbackCwd = process.cwd()):
     const command = str(input.command);
     return command ? checkBash(cwd, command) : null;
   }
+  const sensitiveRead = checkSensitiveRead(tool, cwd, input);
+  if (sensitiveRead) return sensitiveRead;
   const proposed = proposedText(tool, input);
   return proposed ? checkWrite(cwd, proposed.file, proposed.text, proposed.partial) : null;
 }

@@ -119,15 +119,56 @@ test('asks when a shell command embeds a credential', () => sandbox(dir => {
   assert.ok(!r.raw.includes(t));
 }));
 
+test('denies direct Read access to real env files but allows templates', () => sandbox(dir => {
+  for (const file of ['.env', './.env.local', 'config/.env.production']) {
+    const r = hook(pre(dir, 'Read', {file_path: join(dir, file)}), dir);
+    assert.equal(r.decision.permissionDecision, 'deny', file);
+    assert.ok(!r.raw.includes('OPENAI_API_KEY='));
+  }
+  for (const file of ['.env.example', '.env.sample', '.env.template']) {
+    const r = hook(pre(dir, 'Read', {file_path: join(dir, file)}), dir);
+    assert.equal(r.raw, '', file);
+  }
+}));
+
+test('denies Grep when its path or glob directly targets a secret file', () => sandbox(dir => {
+  const direct = hook(pre(dir, 'Grep', {pattern: 'API_KEY', path: join(dir, '.env')}), dir);
+  assert.equal(direct.decision.permissionDecision, 'deny');
+  const glob = hook(pre(dir, 'Grep', {pattern: 'API_KEY', path: dir, glob: '**/.env.local'}), dir);
+  assert.equal(glob.decision.permissionDecision, 'deny');
+}));
+
+test('denies shell commands that read or copy a real env file', () => sandbox(dir => {
+  for (const command of [
+    'cat .env',
+    "sed -n '1,5p' ./.env.local",
+    'git show HEAD:.env.production',
+    'cp .env /tmp/backup.env',
+    "python -c \"print(open('.env').read())\"",
+    'source .env',
+  ]) {
+    const r = hook(pre(dir, 'Bash', {command}), dir);
+    assert.equal(r.decision.permissionDecision, 'deny', command);
+  }
+  assert.equal(hook(pre(dir, 'Bash', {command: 'cat .env.example'}), dir).raw, '');
+}));
+
+test('denies direct reads of common private-key and credential files', () => sandbox(dir => {
+  for (const file of ['id_rsa', 'id_ed25519', 'server.pem', '.npmrc', '.aws/credentials']) {
+    const r = hook(pre(dir, 'Read', {file_path: join(dir, file)}), dir);
+    assert.equal(r.decision.permissionDecision, 'deny', file);
+  }
+}));
+
 test('unrelated tools and events are ignored', () => sandbox(dir => {
   assert.equal(hook(pre(dir, 'Read', {file_path: join(dir, 'x')}), dir).raw, '');
   assert.equal(hook({hook_event_name: 'PostToolUse', tool_name: 'Write', tool_input: {file_path: 'a', content: token()}}, dir).raw, '');
   assert.equal(hook(pre(dir, 'Bash', {command: 'git log --oneline'}), dir).raw, '');
 }));
 
-test('malformed input is a visible non-blocking error', () => sandbox(dir => {
+test('malformed hook input blocks the tool call (fail closed)', () => sandbox(dir => {
   const r = hook('{not json', dir);
-  assert.equal(r.status, 1);
+  assert.equal(r.status, 2);
   assert.equal(r.raw, '');
-  assert.match(r.stderr, /invalid JSON/);
+  assert.match(r.stderr, /blocked: invalid JSON/);
 }));
