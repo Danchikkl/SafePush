@@ -1,0 +1,15 @@
+{
+  "name": "safepush",
+  "description": "SafePush: local secret guardrails for coding agents",
+  "owner": {
+    "name": "Danchikkl",
+    "url": "https://github.com/Danchikkl"
+  },
+  "plugins": [
+    {
+      "name": "safepush",
+      "source": "./plugin",
+      "description": "Blocks hardcoded credentials, risky .env handling and secret-leaking commits before Claude Code performs them. Adds the read-only safepush_scan MCP tool."
+    }
+  ]
+}

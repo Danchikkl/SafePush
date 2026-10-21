@@ -23,7 +23,9 @@ The project root is pinned at startup; an agent cannot pass another root through
 
 ## Claude Code
 
-From the project to scan:
+The easiest option is the [SafePush plugin](claude-code-hooks.md#as-a-plugin-recommended), which adds this MCP server together with the hook. Without `--root`, the server scans the Git repository that contains the directory it is started from.
+
+To register only the MCP server, from the project to scan:
 
     claude mcp add --transport stdio safepush -- node /ABSOLUTE/PATH/TO/SafePush/dist/mcp.mjs --root /ABSOLUTE/PATH/TO/YOUR/PROJECT
     claude mcp list

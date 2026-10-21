@@ -1,0 +1,14 @@
+{
+  "name": "safepush",
+  "displayName": "SafePush",
+  "version": "0.1.0",
+  "description": "Local secret guardrails for coding agents: blocks hardcoded credentials, risky .env handling and secret-leaking commits before they happen. No network, no telemetry.",
+  "author": {
+    "name": "Danchikkl",
+    "url": "https://github.com/Danchikkl"
+  },
+  "homepage": "https://github.com/Danchikkl/SafePush",
+  "repository": "https://github.com/Danchikkl/SafePush",
+  "license": "MIT",
+  "keywords": ["security", "secrets", "guardrails", "hooks", "mcp", "nextjs", "vite"]
+}

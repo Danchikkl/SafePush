@@ -27,6 +27,16 @@ Reasons shown to Claude and to you contain rule names, file paths and line numbe
 
 ## Enable it
 
+### As a plugin (recommended)
+
+```text
+/plugin install safepush --marketplace Danchikkl/safepush
+```
+
+On Claude Code before v2.1.275, run `/plugin marketplace add Danchikkl/SafePush` and then `/plugin install safepush@safepush`. The plugin registers the same hook as the manual setup below and adds the `safepush_scan` MCP tool. Remove it with `/plugin uninstall safepush`.
+
+### Manually
+
 1. Build SafePush from source (see the README) and note the absolute path to `dist/cli.mjs`.
 2. Add this to **one** Claude Code settings file you control, for example your project's `.claude/settings.local.json` (personal, not committed) or `~/.claude/settings.json` (all projects):
 
@@ -35,7 +45,7 @@ Reasons shown to Claude and to you contain rule names, file paths and line numbe
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash",
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|Read|Grep",
         "hooks": [
           {
             "type": "command",

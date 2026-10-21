@@ -57,11 +57,16 @@ function projectRoot(args: string[]): string {
   if (args.length !== 0 && (args.length !== 2 || args[0] !== '--root' || !args[1])) {
     throw new Error('Usage: node dist/mcp.mjs [--root /absolute/project/path]');
   }
-  const root = realpathSync(resolve(args[1] ?? process.cwd()));
+  const explicit = args[1];
+  let root = realpathSync(resolve(explicit ?? process.cwd()));
   if (!lstatSync(root).isDirectory()) throw new Error('Project root must be a directory.');
   const repository = gitRoot(root);
+  // Without --root (for example when launched by a Claude Code plugin from a subfolder),
+  // scan the enclosing repository. An explicit subdirectory is still rejected below,
+  // because the caller asked for a narrower scope than Git scans would honour.
+  if (!explicit && repository) root = realpathSync(repository);
   // Git provides a relative prefix even when Windows path spellings differ.
-  if (repository && String(gitExec(root, ['rev-parse', '--show-prefix'], { encoding: 'utf8' })).trim() !== '') {
+  if (explicit && repository && String(gitExec(root, ['rev-parse', '--show-prefix'], { encoding: 'utf8' })).trim() !== '') {
     throw new Error('Use the Git repository root, not a subdirectory, to avoid scanning outside the selected path.');
   }
   return root;
