@@ -6,6 +6,10 @@ A free, local-first CLI that helps builders spot exposed credentials, unsafe bro
 
 > **Status:** v0.1 experimental release candidate. This repository is ready to explore and contribute to, but the npm package is **not published yet**. A clean scan does **not** mean an app is secure.
 
+![SafePush blocking a hardcoded key, a .env read and a --no-verify commit from a coding agent, then scanning a project](docs/assets/safepush-demo.gif)
+
+<sub>Hook decisions and scan output in this recording are real SafePush output on a temporary project with synthetic keys. Agent actions are shown as the events Claude Code sends to the hook. The Claude Code hook is experimental and opt-in.</sub>
+
 ## Try SafePush in 60 seconds
 
 The built-in demo creates a temporary example project with **synthetic credentials only**, scans it, shows the findings, then shows a rescan after a simulated fix. It does **not** scan your private files.
