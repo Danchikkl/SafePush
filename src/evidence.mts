@@ -23,6 +23,22 @@ const observations: Record<RuleId, { evidence: Evidence; verify: string }> = {
     evidence: { source: 'heuristic', summary: 'A browser-public variable name looks sensitive; its value was not assessed.' },
     verify: 'Check whether the value is intentionally public and inspect the actual client bundle if deployed.',
   },
+  ENCODED_SECRET: {
+    evidence: { source: 'pattern', summary: 'A known credential format matched after base64, hex or URL decoding; validity was not tested.' },
+    verify: 'Decode the referenced value locally. Encoding does not protect a secret; rotate it if genuine.',
+  },
+  AGENT_CONFIG_SECRET: {
+    evidence: { source: 'configuration', summary: 'An AI agent or MCP configuration file contains a literal credential-like value.' },
+    verify: 'Move the value to an environment variable or the OS keychain and reference it from the config.',
+  },
+  AGENT_CONFIG_RISK: {
+    evidence: { source: 'configuration', summary: 'A project-level agent setting can redirect credentials or run commands before review.' },
+    verify: 'Confirm who added the setting and whether it is needed in a shared repository.',
+  },
+  HIDDEN_UNICODE: {
+    evidence: { source: 'heuristic', summary: 'An agent instruction file contains invisible or bidirectional Unicode characters.' },
+    verify: 'Inspect the line with a hex viewer or `cat -v`; legitimate instruction files rarely need these characters.',
+  },
   ENV_GITIGNORE_MISSING: {
     evidence: { source: 'configuration', summary: 'Common .env ignore patterns were not detected; this is not a full Git ignore evaluation.' },
     verify: 'Review .gitignore and use git check-ignore for relevant paths; check tracked files separately.',

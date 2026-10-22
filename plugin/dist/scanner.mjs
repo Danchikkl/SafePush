@@ -3,6 +3,9 @@ import { resolve } from 'node:path';
 import { gitExec, gitRoot, listGitFiles, listLocalFiles, safeFile, trackedFiles } from './git.mjs';
 import { envIgnoreMissing, finding, isEnvFile, isEnvTemplate, scanContent } from './rules.mjs';
 import { addEvidence, priorityOrder } from './evidence.mjs';
+import { scanEncoded } from './decode.mjs';
+import { isAgentConfig, isInstructionFile, scanAgentConfig, scanInstructionFile } from './agent-config.mjs';
+import { applyPolicy, loadPolicy } from './policy.mjs';
 const MAX_FILE_BYTES = 1_000_000;
 const MAX_FILES = 10_000;
 const skipExtensions = /\.(?:png|jpe?g|gif|webp|pdf|zip|gz|7z|mp3|mp4|woff2?|ico|lock)$/i;
@@ -42,6 +45,7 @@ export function scan(options) {
         throw new Error('Scan stopped: more than ' + MAX_FILES + ' files.');
     const tracked = repoRoot ? trackedFiles(root) : new Set();
     const findings = [];
+    const sources = new Map();
     let filesScanned = 0;
     let skippedLargeOrBinary = 0;
     for (const file of entries) {
@@ -71,7 +75,14 @@ export function scan(options) {
             continue;
         }
         filesScanned++;
-        findings.push(...scanContent(file.replaceAll('\\', '/'), contents.toString('utf8')));
+        const rel = file.replaceAll('\\', '/');
+        const text = contents.toString('utf8');
+        sources.set(rel, text.split(/\r?\n/));
+        findings.push(...scanContent(rel, text), ...scanEncoded(rel, text));
+        if (isAgentConfig(rel))
+            findings.push(...scanAgentConfig(rel, text));
+        if (isInstructionFile(rel))
+            findings.push(...scanInstructionFile(rel, text));
     }
     // Even if an env file is unchanged, it is still at risk while tracked.
     for (const candidate of tracked) {
@@ -91,7 +102,7 @@ export function scan(options) {
         throw new Error('Incomplete staged scan: ' + skippedLargeOrBinary + ' oversized or binary file(s) could not be checked. Review before committing.');
     }
     const mode = options.staged ? 'staged' : 'workspace';
-    const reviewed = findings.map(f => addEvidence(f, mode));
+    const reviewed = applyPolicy(findings, loadPolicy(root), sources).map(f => addEvidence(f, mode));
     reviewed.sort((a, b) => priorityOrder(a.priority) - priorityOrder(b.priority) || a.file.localeCompare(b.file) || (a.line ?? 0) - (b.line ?? 0));
     return { root, mode, filesScanned, frameworks: frameworks(root), findings: reviewed, skippedLargeOrBinary };
 }

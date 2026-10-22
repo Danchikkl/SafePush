@@ -14,6 +14,16 @@ const patterns = [
 // user:password@ inside a connection URL. The password group is checked against placeholders separately.
 const credentialUrl = /\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|rediss?|amqps?|mssql|sqlserver):\/\/[^\s:@\/'"`]+:([^\s@\/'"`]+)@/gi;
 const defaultUrlPasswords = /^(?:postgres|password|passwd|root|admin|secret|example|changeme|pass|test|guest|mysql|redis)$/i;
+/** Provider names of known credential formats present in text. Never returns the values. */
+export function knownSecretProviders(text) {
+    const found = [];
+    for (const { provider, pattern } of patterns) {
+        pattern.lastIndex = 0;
+        if (pattern.test(text))
+            found.push(provider);
+    }
+    return found;
+}
 export function redactKnownSecrets(text) {
     let value = text;
     for (const { pattern } of patterns) {

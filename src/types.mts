@@ -7,7 +7,11 @@ export type RuleId =
   | 'GENERIC_SECRET_ASSIGNMENT'
   | 'TRACKED_ENV_FILE'
   | 'CLIENT_EXPOSED_SECRET_NAME'
-  | 'ENV_GITIGNORE_MISSING';
+  | 'ENV_GITIGNORE_MISSING'
+  | 'ENCODED_SECRET'
+  | 'AGENT_CONFIG_SECRET'
+  | 'AGENT_CONFIG_RISK'
+  | 'HIDDEN_UNICODE';
 
 export interface Finding {
   rule: RuleId;
