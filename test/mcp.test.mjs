@@ -147,6 +147,21 @@ test('startup rejects Git subdirectory to avoid scanning parent unexpectedly', (
   assert.match(p.stderr, /invalid project root/);
 }));
 
+test('without --root, a server started in a subdirectory scans the enclosing repository', () => sandbox(root => {
+  git(['init', '-q'], root);
+  mkdirSync(join(root, 'subdir'));
+  writeFileSync(join(root, 'app.js'), 'const t = "' + token() + '";\n');
+  const input = [legacyInit, request(2, 'tools/call', { name: 'safepush_scan', arguments: {} })]
+    .map(m => JSON.stringify(m)).join('\n') + '\n';
+  const p = spawnSync(process.execPath, [executable], {
+    cwd: join(root, 'subdir'), encoding: 'utf8', input, timeout: 15000,
+  });
+  assert.equal(p.status, 0, p.stderr);
+  const responses = p.stdout.trim().split('\n').map(line => JSON.parse(line));
+  assert.ok(payload(responses[1]).findings.some(f => f.rule === 'KNOWN_SECRET' && f.file === 'app.js'));
+  assert.ok(!p.stdout.includes(token()));
+}));
+
 test('staged scan failures return an error tool result, not a clean report', () => sandbox(root => {
   git(['init', '-q'], root);
   writeFileSync(join(root, 'oversized.js'), 'x'.repeat(1_000_001));

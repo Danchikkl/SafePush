@@ -1,7 +1,7 @@
 {
-  "name": "safepush-dev",
+  "name": "@danchikkl/safepush",
   "version": "0.1.0",
-  "description": "Local-first security guardrails for AI-built Next.js and Vite projects",
+  "description": "Local secret guardrails for AI coding agents: CLI, Claude Code hook and MCP server. No network, no telemetry.",
   "type": "module",
   "bin": {
     "safepush": "./dist/cli.mjs",
@@ -18,10 +18,24 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "node --test test/*.test.mjs",
-    "check": "npm run build && npm test",
+    "check": "npm run build && node scripts/build-plugin.mjs && npm test",
     "prepack": "npm run build",
     "demo": "npm run build && node scripts/demo.mjs",
-    "mcp": "node dist/mcp.mjs"
+    "mcp": "node dist/mcp.mjs",
+    "build:plugin": "npm run build && node scripts/build-plugin.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Danchikkl/SafePush.git"
+  },
+  "homepage": "https://github.com/Danchikkl/SafePush#readme",
+  "bugs": {
+    "url": "https://github.com/Danchikkl/SafePush/issues"
+  },
+  "author": "Danchikkl",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -37,7 +51,11 @@
     "open-source",
     "mcp",
     "claude-code",
-    "codex"
+    "codex",
+    "claude-code-plugin",
+    "hooks",
+    "guardrails",
+    "secret-scanning"
   ],
   "license": "MIT"
 }

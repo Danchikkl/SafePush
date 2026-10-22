@@ -21,6 +21,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run build
       - run: npm test
+      # The Claude Code plugin ships compiled files; fail if they drift from src/.
+      - run: node scripts/build-plugin.mjs && test -z "$(git status --porcelain -- plugin/)" || (git status --short -- plugin/; exit 1)
       - run: npm audit --audit-level=high
       - run: npm pack --dry-run --ignore-scripts
   test-windows:

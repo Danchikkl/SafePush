@@ -4,11 +4,41 @@
 
 A free, local-first CLI that helps builders spot exposed credentials, unsafe browser environment variables, and common `.env` mistakes. Designed for Next.js, Vite, and people who build with AI coding assistants. No account, API key, AI subscription, or telemetry.
 
-> **Status:** v0.1 experimental release candidate. This repository is ready to explore and contribute to, but the npm package is **not published yet**. A clean scan does **not** mean an app is secure.
+> **Status:** v0.1 experimental. A clean scan does **not** mean an app is secure.
 
 ![SafePush blocking a hardcoded key, a .env read and a --no-verify commit from a coding agent, then scanning a project](docs/assets/safepush-demo.gif)
 
-<sub>Hook decisions and scan output in this recording are real SafePush output on a temporary project with synthetic keys. Agent actions are shown as the events Claude Code sends to the hook. The Claude Code hook is experimental and opt-in.</sub>
+<sub>Hook decisions and scan output in this recording are real SafePush output on a temporary project with synthetic keys. Agent actions are shown as the events Claude Code sends to the hook. Regenerate with `scripts/render-demo-gif.py`.</sub>
+
+## Install
+
+### Claude Code plugin (hook + MCP tool)
+
+Inside Claude Code (v2.1.275 or later):
+
+```text
+/plugin install safepush --marketplace Danchikkl/safepush
+```
+
+On older versions, add the marketplace first:
+
+```text
+/plugin marketplace add Danchikkl/SafePush
+/plugin install safepush@safepush
+```
+
+This enables the [Claude Code hook](docs/claude-code-hooks.md) on `Write`, `Edit`, `MultiEdit`, `NotebookEdit`, `Read`, `Grep` and `Bash`, and adds the read-only `safepush_scan` [MCP tool](docs/mcp.md). The plugin runs the compiled files committed in [`plugin/`](plugin/) with your local Node.js 22+; it needs no npm install and makes no network requests. Review that folder before installing, and remove the plugin with `/plugin uninstall safepush`.
+
+### CLI with npx
+
+Once the package is published to npm as `@danchikkl/safepush`:
+
+```bash
+npx -y @danchikkl/safepush scan .
+npx -y @danchikkl/safepush scan . --staged
+```
+
+Until then, build from source as shown below.
 
 ## Try SafePush in 60 seconds
 
@@ -21,7 +51,7 @@ npm ci --ignore-scripts
 npm run demo
 ```
 
-> Requires Node.js 22+ and npm. The CLI isn't published to npm yet.
+> Requires Node.js 22+ and npm.
 
 ## Scan your own project
 
@@ -124,7 +154,9 @@ npm run check
 node dist/cli.mjs --help
 ```
 
-You can run `npm link` from this checkout to make `safepush` available globally for your own local experiments. **Do not use `npx safepush` until the package is published under a verified name.** The `package.json` name (`safepush-dev`) is provisional and should be checked for availability before npm publication.
+You can run `npm link` from this checkout to make `safepush` available globally for your own local experiments. The npm package name is `@danchikkl/safepush`. **Do not run `npx safepush`**: the unscoped name `safepush` is not this project.
+
+After changing `src/`, run `npm run check`. It also refreshes the compiled copy in `plugin/dist`, which CI requires to match `src/`.
 
 ### Use it in your own project
 
