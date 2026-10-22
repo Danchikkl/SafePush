@@ -87,6 +87,6 @@ Tests cover legacy and modern protocols, Git index vs worktree, pinned-root enfo
 
 ## Later
 
-- Optional agent hooks for deterministic checks.
+- Deterministic checks for other agents. For Claude Code, see the opt-in [hook adapter](claude-code-hooks.md).
 - Separate confidence heuristics for obvious synthetic tokens, **without silently suppressing known credential patterns**.
 - Additional interoperability and conformance testing against MCP SDK clients.

@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { gitExec, gitRoot } from './git.mjs';
 import { envIgnoreMissing, redactKnownSecrets } from './rules.mjs';
 import { scan } from './scanner.mjs';
+import { evaluateClaudeHook, hookOutput } from './claude-hook.mjs';
 import type { Finding, ScanResult } from './types.mjs';
 
 const VERSION = '0.1.0';
@@ -14,12 +15,14 @@ const USAGE = [
   '  safepush scan [path] [--staged] [--strict] [--json]',
   '  safepush init [path] [--hook]',
   '  safepush explain <rule-id>',
+  '  safepush hook claude        (reads a Claude Code PreToolUse event on stdin)',
   '  safepush --help',
   '',
   'Commands:',
   '  scan       Scan local files without uploading contents',
   '  init       Add .env ignore rules; optionally install a pre-commit hook',
   '  explain    Show recovery guidance',
+  '  hook       Opt-in Claude Code hook adapter; see docs/claude-code-hooks.md',
   '',
   'Options:',
   '  --staged   Scan exact file contents in the Git index',
@@ -115,6 +118,19 @@ function addHook(path: string): void {
   chmodSync(path, 0o755);
   console.log('Git pre-commit hook installed; did not replace an existing hook.');
 }
+const MAX_HOOK_INPUT = 16 * 1024 * 1024;
+function runClaudeHook(): number {
+  // This opt-in security hook blocks if its input cannot be checked.
+  // Claude Code treats exit code 2 as a blocking hook error.
+  const raw = readFileSync(0);
+  if (raw.length > MAX_HOOK_INPUT) { console.error('SafePush hook blocked: input too large; not checked.'); return 2; }
+  let event: unknown;
+  try { event = JSON.parse(raw.toString('utf8')); }
+  catch { console.error('SafePush hook blocked: invalid JSON input; not checked.'); return 2; }
+  const out = hookOutput(evaluateClaudeHook(event));
+  if (out) process.stdout.write(out + '\n');
+  return 0;
+}
 function main(args: string[]): number {
   const [command = '--help', ...rest] = args;
   if (command === '--help' || command === '-h' || command === 'help') { console.log(USAGE); return 0; }
@@ -124,6 +140,10 @@ function main(args: string[]): number {
     if (!rule || !explain[rule]) { console.error('Unknown rule. Choices: ' + Object.keys(explain).join(', ')); return 2; }
     console.log(rule + '\n\n' + explain[rule]);
     return 0;
+  }
+  if (command === 'hook') {
+    if (rest.length !== 1 || rest[0] !== 'claude') { console.error('Usage: safepush hook claude'); return 2; }
+    return runClaudeHook();
   }
   if (command !== 'scan' && command !== 'init') { console.error('Unknown command: ' + command + '\n\n' + USAGE); return 2; }
   const knownFlags = new Set(command === 'scan' ? ['--staged','--strict','--json'] : ['--hook']);
