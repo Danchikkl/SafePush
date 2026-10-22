@@ -4,7 +4,8 @@ import { dirname, join, resolve } from 'node:path';
 import { gitExec, gitRoot } from './git.mjs';
 import { envIgnoreMissing, redactKnownSecrets } from './rules.mjs';
 import { scan } from './scanner.mjs';
-import { evaluateClaudeHook, hookOutput } from './claude-hook.mjs';
+import { routeClaudeHook } from './hook-router.mjs';
+import { toSarif } from './sarif.mjs';
 import type { Finding, ScanResult } from './types.mjs';
 
 const VERSION = '0.1.0';
@@ -127,7 +128,7 @@ function runClaudeHook(): number {
   let event: unknown;
   try { event = JSON.parse(raw.toString('utf8')); }
   catch { console.error('SafePush hook blocked: invalid JSON input; not checked.'); return 2; }
-  const out = hookOutput(evaluateClaudeHook(event));
+  const out = routeClaudeHook(event);
   if (out) process.stdout.write(out + '\n');
   return 0;
 }
@@ -146,7 +147,7 @@ function main(args: string[]): number {
     return runClaudeHook();
   }
   if (command !== 'scan' && command !== 'init') { console.error('Unknown command: ' + command + '\n\n' + USAGE); return 2; }
-  const knownFlags = new Set(command === 'scan' ? ['--staged','--strict','--json'] : ['--hook']);
+  const knownFlags = new Set(command === 'scan' ? ['--staged','--strict','--json','--sarif'] : ['--hook']);
   const unknown = rest.filter(x => x.startsWith('--') && !knownFlags.has(x));
   if (unknown.length) { console.error('Unknown option: ' + unknown.join(', ')); return 2; }
   const paths = rest.filter(x => !x.startsWith('--'));
@@ -161,7 +162,9 @@ function main(args: string[]): number {
     return 0;
   }
   const result = scan({root, staged:rest.includes('--staged')});
-  if (rest.includes('--json')) {
+  if (rest.includes('--sarif')) {
+    console.log(JSON.stringify(toSarif({...result, findings:result.findings.map(f => ({...f, file:sanitize(f.file)}))}, VERSION), null, 2));
+  } else if (rest.includes('--json')) {
     const {root: _localRoot, ...publicResult} = result;
     console.log(JSON.stringify({...publicResult, findings:result.findings.map(f => ({...f, file:sanitize(f.file)}))}, null, 2));
   } else summarize(result);
