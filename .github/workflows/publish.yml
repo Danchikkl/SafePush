@@ -22,7 +22,7 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
       - run: npm ci --ignore-scripts
       - run: npm run check
-      - run: git diff --exit-code -- plugin/
+      - run: test -z "$(git status --porcelain -- plugin/)" || (git status --short -- plugin/; exit 1)
       - run: npm publish --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
