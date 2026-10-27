@@ -19,6 +19,7 @@ import { evaluateClaudeHook, hookOutput } from './claude-hook.mjs';
 import { gitRoot } from './git.mjs';
 import { outputGuard, promptGuard, sinkGuard } from './guards.mjs';
 import { isPolicyFile, loadPolicy } from './policy.mjs';
+import { scrapingGuard, supplyChainGuard } from './network-policy.mjs';
 const isRecord = (v) => typeof v === 'object' && v !== null && !Array.isArray(v);
 const WRITE_TOOLS = new Set(['Write', 'Edit', 'MultiEdit', 'NotebookEdit']);
 /** An agent edit that writes the policy file or adds an inline suppression. */
@@ -63,7 +64,11 @@ export function routeClaudeHook(event, fallbackCwd = process.cwd()) {
                 log('ask', 'policy');
                 return hookOutput(tamper);
             }
-            const decision = (policy.guards.sinks ? sinkGuard(tool, input) : null) ?? evaluateClaudeHook(event, cwd);
+            // Most severe first: secret exfiltration and existing write/read/commit checks can deny;
+            // blocked domains deny; downloads and scraping otherwise ask.
+            const decision = (policy.guards.sinks ? sinkGuard(tool, input) : null) ?? evaluateClaudeHook(event, cwd)
+                ?? (policy.guards.scraping ? scrapingGuard(tool, input, policy.network) : null)
+                ?? (policy.guards.supplyChain ? supplyChainGuard(tool, input, policy.network) : null);
             if (!decision)
                 return '';
             log(policy.mode === 'audit' ? 'audit' : decision.decision, 'pre-tool');

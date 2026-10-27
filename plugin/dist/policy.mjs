@@ -17,13 +17,15 @@ export const DEFAULT_POLICY = {
     mode: 'balanced',
     ignorePaths: [],
     disabledRules: [],
-    guards: { prompt: true, output: true, sinks: true, agentConfig: true },
+    guards: { prompt: true, output: true, sinks: true, agentConfig: true, supplyChain: true, scraping: true },
+    network: { trustedSources: [], blockedDomains: [] },
 };
 const POLICY_FILE = '.safepush.json';
 const MAX_POLICY_BYTES = 64 * 1024;
 export function isPolicyFile(path) {
     return path.replaceAll('\\', '/').split('/').pop() === POLICY_FILE;
 }
+const strings = (v) => Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, 200) : [];
 /** Loads .safepush.json. Invalid policy falls back to defaults rather than to "allow all". */
 export function loadPolicy(repoRoot) {
     let raw;
@@ -42,6 +44,10 @@ export function loadPolicy(repoRoot) {
             ignorePaths: Array.isArray(p.ignorePaths) ? p.ignorePaths.filter(x => typeof x === 'string').slice(0, 200) : [],
             disabledRules: Array.isArray(p.disabledRules) ? p.disabledRules.filter((x) => typeof x === 'string') : [],
             guards: { ...DEFAULT_POLICY.guards, ...(typeof p.guards === 'object' && p.guards ? p.guards : {}) },
+            network: {
+                trustedSources: strings(p.network?.trustedSources),
+                blockedDomains: strings(p.network?.blockedDomains),
+            },
         };
     }
     catch {
