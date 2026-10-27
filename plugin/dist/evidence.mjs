@@ -33,6 +33,10 @@ const observations = {
         evidence: { source: 'configuration', summary: 'A project-level agent setting can redirect credentials or run commands before review.' },
         verify: 'Confirm who added the setting and whether it is needed in a shared repository.',
     },
+    UNPINNED_GIT_DEPENDENCY: {
+        evidence: { source: 'configuration', summary: 'A manifest or MCP config installs code from a Git repository without a pinned commit.' },
+        verify: 'Check who owns the repository, then use a registry release or pin a full commit SHA.',
+    },
     HIDDEN_UNICODE: {
         evidence: { source: 'heuristic', summary: 'An agent instruction file contains invisible or bidirectional Unicode characters.' },
         verify: 'Inspect the line with a hex viewer or `cat -v`; legitimate instruction files rarely need these characters.',

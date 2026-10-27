@@ -28,6 +28,15 @@ The hook handles `PreToolUse` events, i.e. **before** Claude runs a tool:
 | Network command that sends a secret-named variable such as `$GITHUB_TOKEN` | **ask**: check the destination |
 | Environment or secret dumps (`env`, `printenv`, `docker inspect`, `kubectl get secret -o yaml`, `gh auth token`) | **ask** |
 | Agent edits `.safepush.json` or adds a `safepush-ignore` comment | **ask**, in every mode |
+| Runs a script straight from the internet: `curl … \| sh`, `bash <(curl …)`, `iex (irm …)` | **ask** |
+| Installs or runs code straight from Git: `npm i github:u/r`, `npm i u/r`, `npx u/r`, `pip install git+…`, `cargo install --git`, archive URLs | **ask** |
+| `git clone … && npm install` / `make` / `./install.sh` in one command | **ask** |
+| Downloads a GitHub release binary and makes it executable | **ask** |
+| Installs a package one letter away from a popular one (`reqeusts`, `expres`) | **ask** |
+| Adds an unpinned Git dependency or MCP server to `package.json`, `requirements*.txt`, `pyproject.toml`, `.mcp.json` | **ask** (pinned 40-character commit SHAs pass) |
+| Fetches a host listed in `network.blockedDomains` (WebFetch, `curl`/`wget`, MCP arguments) | **deny** |
+| Calls a crawling or scraping MCP tool (`*crawl*`, `*scrap*`, `*spider*`) | **ask**: check the site's terms and personal data |
+| Installs or writes anti-bot evasion: stealth plugins, CAPTCHA solvers, `cloudscraper` | **ask** |
 | **PostToolUse:** a tool result that contains a known credential | result replaced with a `[REDACTED]` copy (see limitations) |
 | Anything else | no output; Claude Code's normal permission flow continues |
 
@@ -95,13 +104,19 @@ An optional `.safepush.json` at the repository root, reviewed like any other con
   "mode": "balanced",
   "ignorePaths": ["test/fixtures/**"],
   "disabledRules": [],
-  "guards": { "prompt": true, "output": true, "sinks": true, "agentConfig": true }
+  "guards": { "prompt": true, "output": true, "sinks": true, "agentConfig": true, "supplyChain": true, "scraping": true },
+  "network": {
+    "trustedSources": ["github.com/vercel/*", "github.com/anthropics/*", "bun.sh"],
+    "blockedDomains": ["linkedin.com", "*.gov.kz"]
+  }
 }
 ```
 
 - `balanced` (default): high findings deny, medium ask. `strict`: both deny. `audit`: nothing is blocked; decisions are only logged to `.git/safepush/audit.jsonl` (no paths, commands or values). Output redaction stays on in every mode.
 - Inline: `// safepush-ignore KNOWN_SECRET -- synthetic fixture` on the same or the previous line. A rule id and a reason after `--` are required.
 - An invalid policy file falls back to the defaults, never to "allow everything".
+- `network.trustedSources`: GitHub owners or repositories (`github.com/owner/*`, `github.com/owner/repo`) and hosts (`bun.sh`, `*.example.com`) whose downloads and installs never ask. A command that mixes a trusted and an untrusted source still asks.
+- `network.blockedDomains`: hosts the agent may not fetch or scrape. Subdomains are included.
 
 ## Limitations
 
@@ -111,5 +126,6 @@ An optional `.safepush.json` at the repository root, reviewed like any other con
 - **Fails closed on bad input.** Malformed or oversized hook input exits with status 2, which blocks the tool call. This is safer for secrets but can interrupt work if Claude Code changes its event format; check the hook after upgrading Claude Code.
 - **`ask` decisions are only as good as your review.** If you approve, the action proceeds.
 - **Output redaction for Bash may not apply.** Users have reported that Claude Code ignores `updatedToolOutput` for the Bash tool. The environment-dump rule is the preventive layer for shell commands; verify redaction in your Claude Code version before relying on it.
+- **Download and scraping checks warn, they do not judge.** SafePush cannot tell whether a repository is malicious or whether scraping a site is legal: it flags the patterns where problems usually start and lets you decide. Text inside quotes (`echo "curl … | sh"`) is ignored unless it contains a command substitution. This is not legal advice.
 - **Network checks are textual.** Scripts, aliases or `python -c` that send data from inside are not seen. Use Claude Code's sandbox and network restrictions alongside SafePush.
 - A clean result is not a security audit.

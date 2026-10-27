@@ -6,6 +6,7 @@ import { addEvidence, priorityOrder } from './evidence.mjs';
 import { scanEncoded } from './decode.mjs';
 import { isAgentConfig, isInstructionFile, scanAgentConfig, scanInstructionFile } from './agent-config.mjs';
 import { applyPolicy, loadPolicy } from './policy.mjs';
+import { scanGitDependencies } from './network-policy.mjs';
 const MAX_FILE_BYTES = 1_000_000;
 const MAX_FILES = 10_000;
 const skipExtensions = /\.(?:png|jpe?g|gif|webp|pdf|zip|gz|7z|mp3|mp4|woff2?|ico|lock)$/i;
@@ -83,6 +84,7 @@ export function scan(options) {
             findings.push(...scanAgentConfig(rel, text));
         if (isInstructionFile(rel))
             findings.push(...scanInstructionFile(rel, text));
+        findings.push(...scanGitDependencies(rel, text));
     }
     // Even if an env file is unchanged, it is still at risk while tracked.
     for (const candidate of tracked) {

@@ -22,14 +22,17 @@ export interface Policy {
   ignorePaths: string[];
   /** Rules disabled for the whole repository. */
   disabledRules: RuleId[];
-  guards: { prompt: boolean; output: boolean; sinks: boolean; agentConfig: boolean };
+  guards: { prompt: boolean; output: boolean; sinks: boolean; agentConfig: boolean; supplyChain: boolean; scraping: boolean };
+  /** Trusted code sources and blocked scraping targets (see network-policy.mts). */
+  network: { trustedSources: string[]; blockedDomains: string[] };
 }
 
 export const DEFAULT_POLICY: Policy = {
   mode: 'balanced',
   ignorePaths: [],
   disabledRules: [],
-  guards: { prompt: true, output: true, sinks: true, agentConfig: true },
+  guards: { prompt: true, output: true, sinks: true, agentConfig: true, supplyChain: true, scraping: true },
+  network: { trustedSources: [], blockedDomains: [] },
 };
 
 const POLICY_FILE = '.safepush.json';
@@ -38,6 +41,8 @@ const MAX_POLICY_BYTES = 64 * 1024;
 export function isPolicyFile(path: string): boolean {
   return path.replaceAll('\\', '/').split('/').pop() === POLICY_FILE;
 }
+
+const strings = (v: unknown): string[] => Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, 200) : [];
 
 /** Loads .safepush.json. Invalid policy falls back to defaults rather than to "allow all". */
 export function loadPolicy(repoRoot: string): Policy {
@@ -53,6 +58,10 @@ export function loadPolicy(repoRoot: string): Policy {
       ignorePaths: Array.isArray(p.ignorePaths) ? p.ignorePaths.filter(x => typeof x === 'string').slice(0, 200) : [],
       disabledRules: Array.isArray(p.disabledRules) ? p.disabledRules.filter((x): x is RuleId => typeof x === 'string') : [],
       guards: { ...DEFAULT_POLICY.guards, ...(typeof p.guards === 'object' && p.guards ? p.guards : {}) },
+      network: {
+        trustedSources: strings(p.network?.trustedSources),
+        blockedDomains: strings(p.network?.blockedDomains),
+      },
     };
   } catch { return DEFAULT_POLICY; }
 }
