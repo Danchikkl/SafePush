@@ -127,6 +127,12 @@ function gitIgnores(cwd: string, absFile: string): boolean | null {
   }
 }
 
+function isGuardConfigPath(cwd: string, file: string): boolean {
+  const rel = relative(cwd, resolve(cwd, file)).replaceAll('\\', '/');
+  // Only the project's Claude hook and permission configuration, not arbitrary .claude files.
+  return /(?:^|\/)\.claude\/(?:settings(?:\.local)?\.json|hooks\/[^/]+(?:\/[^/]+)*)$/i.test(rel);
+}
+
 function checkWrite(cwd: string, file: string, text: string, partial: boolean): HookDecision {
   const abs = resolve(cwd, file);
   const shown = displayPath(cwd, file);
@@ -150,6 +156,12 @@ function checkWrite(cwd: string, file: string, text: string, partial: boolean): 
     return null;
   }
 
+  if (!findings.length && isGuardConfigPath(cwd, file)) {
+    return { decision: 'ask', reason:
+      'SafePush: this edit changes Claude Code permissions or security hooks (' + shown + '). ' +
+      'Review the exact diff before approving; an agent should not silently weaken its own safeguards. ' +
+      'This hook cannot prevent edits made through arbitrary shell commands or external tools.' };
+  }
   if (!findings.length) return null;
   const high = findings.filter(f => f.severity === 'high');
   const where = partial ? 'in the proposed edit to ' + shown : 'in ' + shown;
