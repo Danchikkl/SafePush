@@ -113,3 +113,9 @@ An optional `.safepush.json` at the repository root, reviewed like any other con
 - **Output redaction for Bash may not apply.** Users have reported that Claude Code ignores `updatedToolOutput` for the Bash tool. The environment-dump rule is the preventive layer for shell commands; verify redaction in your Claude Code version before relying on it.
 - **Network checks are textual.** Scripts, aliases or `python -c` that send data from inside are not seen. Use Claude Code's sandbox and network restrictions alongside SafePush.
 - A clean result is not a security audit.
+
+### Review changes to guard configuration
+
+SafePush's `PreToolUse` hook requests human approval (`ask`) before direct `Write`, `Edit`, or `MultiEdit` changes to `.claude/settings.json`, `.claude/settings.local.json`, or files under `.claude/hooks/`. This is intended to make changes to the agent's own permissions and security hooks visible to the user. A high-confidence secret written to these files still receives `deny`.
+
+**Not a security boundary:** this check only covers supported direct file-edit tools; arbitrary `Bash` commands, scripts, symlinks, external MCP tools, and already-granted broad permissions may bypass it. Claude Code's native permissions, OS isolation, and human review remain necessary. Avoid approving blanket allow-rules.

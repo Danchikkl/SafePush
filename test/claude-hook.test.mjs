@@ -172,3 +172,22 @@ test('malformed hook input blocks the tool call (fail closed)', () => sandbox(di
   assert.equal(r.raw, '');
   assert.match(r.stderr, /blocked: invalid JSON/);
 }));
+
+test('asks before direct edits to Claude permission settings and hook scripts', () => sandbox(dir => {
+  for (const file of ['.claude/settings.json', '.claude/settings.local.json', '.claude/hooks/guard.sh', 'sub/.claude/hooks/guard.mjs']) {
+    const r = hook(pre(dir, 'Write', {file_path: join(dir, file), content: 'safe text'}), dir);
+    assert.equal(r.decision?.permissionDecision, 'ask', file);
+    assert.match(r.decision.permissionDecisionReason, /Review the exact diff/);
+  }
+  const edit = hook(pre(dir, 'Edit', {file_path: join(dir, '.claude/settings.json'), old_string: 'a', new_string: 'b'}), dir);
+  assert.equal(edit.decision?.permissionDecision, 'ask');
+  for (const file of ['.claude/agents/helper.md', '.claude/skills/demo/SKILL.md', 'src/settings.json']) {
+    assert.equal(hook(pre(dir, 'Write', {file_path: join(dir, file), content: 'safe text'}), dir).raw, '', file);
+  }
+}));
+
+test('known secrets in Claude hook files still receive a hard deny', () => sandbox(dir => {
+  const r = hook(pre(dir, 'Write', {file_path: join(dir, '.claude/hooks/guard.sh'), content: token()}), dir);
+  assert.equal(r.decision.permissionDecision, 'deny');
+  assert.ok(!r.raw.includes(token()));
+}));
