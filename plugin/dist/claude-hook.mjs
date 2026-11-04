@@ -121,6 +121,11 @@ function gitIgnores(cwd, absFile) {
         throw error;
     }
 }
+function isGuardConfigPath(cwd, file) {
+    const rel = relative(cwd, resolve(cwd, file)).replaceAll('\\', '/');
+    // Only the project's Claude hook and permission configuration, not arbitrary .claude files.
+    return /(?:^|\/)\.claude\/(?:settings(?:\.local)?\.json|hooks\/[^/]+(?:\/[^/]+)*)$/i.test(rel);
+}
 function checkWrite(cwd, file, text, partial) {
     const abs = resolve(cwd, file);
     const shown = displayPath(cwd, file);
@@ -139,6 +144,11 @@ function checkWrite(cwd, file, text, partial) {
                     list(exposed, !partial) };
         }
         return null;
+    }
+    if (!findings.length && isGuardConfigPath(cwd, file)) {
+        return { decision: 'ask', reason: 'SafePush: this edit changes Claude Code permissions or security hooks (' + shown + '). ' +
+                'Review the exact diff before approving; an agent should not silently weaken its own safeguards. ' +
+                'This hook cannot prevent edits made through arbitrary shell commands or external tools.' };
     }
     if (!findings.length)
         return null;
