@@ -1,0 +1,59 @@
+# Execute from repository root: docker compose -f research/compose.yaml up --build --abort-on-container-exit --exit-code-from agent
+# DEMONSTRATION ONLY: All credentials in fixtures are synthetic and public.
+services:
+  broker:
+    build:
+      context: ..
+      dockerfile: research/Dockerfile
+    command:
+      - node
+      - dist/research-http-broker.mjs
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8787"
+      - --secret-file
+      - /run/secrets/mock_provider_key
+      - --capability-file
+      - /run/secrets/demo_capability
+    environment:
+      SAFEPUSH_RESEARCH_CONTAINER_ONLY: "1"
+    secrets:
+      - mock_provider_key
+      - demo_capability
+    networks:
+      - research_internal
+    user: "node"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+  agent:
+    build:
+      context: ..
+      dockerfile: research/Dockerfile
+    command: [node, research/demo-agent-client.mjs]
+    depends_on: [broker]
+    secrets:
+      - demo_capability
+    networks:
+      - research_internal
+    user: "node"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+
+networks:
+  research_internal:
+    internal: true
+
+secrets:
+  mock_provider_key:
+    file: ./fixtures/mock-provider-key.txt
+  demo_capability:
+    file: ./fixtures/mock-capability.txt
