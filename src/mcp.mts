@@ -38,7 +38,9 @@ function record(value: unknown): value is JsonObject {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 function safeText(value: string): string {
-  return redactKnownSecrets(value).replace(/[\x00-\x1f\x7f-\x9f]/g, '?');
+  // Strip terminal controls and Unicode direction overrides/isolates from untrusted filenames.
+  // These characters can visually reorder a path in agent tool output.
+  return redactKnownSecrets(value).replace(/[\x00-\x1f\x7f-\x9f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/gi, '?');
 }
 function send(value: JsonObject): void {
   process.stdout.write(JSON.stringify(value) + '\n');
