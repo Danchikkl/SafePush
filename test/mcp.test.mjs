@@ -121,7 +121,7 @@ test('token-shaped and control-character filenames are sanitized in MCP results'
 }));
 
 test('MCP accepts multiple small requests even when their combined chunk exceeds one-message limit', () => sandbox(root => {
-  const requests = [legacyInit, ...Array.from({ length: 2800 }, (_, i) => request(i + 2, 'ping'))];
+  const requests = [legacyInit, ...Array.from({ length: 6000 }, (_, i) => request(i + 2, 'ping'))];
   const { responses } = run(root, requests);
   assert.equal(responses.length, requests.length);
   assert.deepEqual(responses.at(-1).result, {});
