@@ -200,15 +200,17 @@ function runServer(root: string): void {
 
   process.stdin.setEncoding('utf8');
   process.stdin.on('data', (chunk: string) => {
+    // Enforce the limit per JSON-RPC message, not per incoming stream chunk.
+    // A chunk can contain many valid newline-delimited requests.
     pending += chunk;
-    if (pending.length > MAX_INPUT_CHARS) {
-      failure(null, -32700, 'Input message too large');
-      process.stdin.destroy();
-      process.exitCode = 2;
-      return;
-    }
     let newline = pending.indexOf('\n');
     while (newline !== -1) {
+      if (newline > MAX_INPUT_CHARS) {
+        failure(null, -32700, 'Input message too large');
+        process.stdin.destroy();
+        process.exitCode = 2;
+        return;
+      }
       const line = pending.slice(0, newline).trim();
       pending = pending.slice(newline + 1);
       if (line) {
@@ -216,6 +218,11 @@ function runServer(root: string): void {
         catch { failure(null, -32700, 'Parse error'); }
       }
       newline = pending.indexOf('\n');
+    }
+    if (pending.length > MAX_INPUT_CHARS) {
+      failure(null, -32700, 'Input message too large');
+      process.stdin.destroy();
+      process.exitCode = 2;
     }
   });
   process.stdin.on('end', () => { pending = ''; });
