@@ -120,6 +120,13 @@ test('token-shaped and control-character filenames are sanitized in MCP results'
   assert.ok(stdout.includes('[REDACTED]'));
 }));
 
+test('MCP accepts multiple small requests even when their combined chunk exceeds one-message limit', () => sandbox(root => {
+  const requests = [legacyInit, ...Array.from({ length: 6000 }, (_, i) => request(i + 2, 'ping'))];
+  const { responses } = run(root, requests);
+  assert.equal(responses.length, requests.length);
+  assert.deepEqual(responses.at(-1).result, {});
+}));
+
 test('unknown methods and malformed modern metadata receive JSON-RPC errors', () => sandbox(root => {
   const { responses } = run(root, [
     request(1, 'tools/list'),
