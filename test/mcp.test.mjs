@@ -120,6 +120,16 @@ test('token-shaped and control-character filenames are sanitized in MCP results'
   assert.ok(stdout.includes('[REDACTED]'));
 }));
 
+test('MCP findings neutralize Unicode bidi controls in untrusted filenames', () => sandbox(root => {
+  if (process.platform === 'win32') return; // Windows rejects some unusual path spellings.
+  const unsafe = 'report-\u202Etxt.exe\u2066.js';
+  writeFileSync(join(root, unsafe), 'const key = "' + token() + '";\n');
+  const { responses, stdout } = run(root, [legacyInit, request(2, 'tools/call', { name: 'safepush_scan', arguments: {} })]);
+  const files = payload(responses[1]).findings.map(f => f.file);
+  assert.ok(files.some(f => f.includes('report-?txt.exe?.js')));
+  assert.doesNotMatch(stdout, /[\u202A-\u202E\u2066-\u2069]/u);
+}));
+
 test('unknown methods and malformed modern metadata receive JSON-RPC errors', () => sandbox(root => {
   const { responses } = run(root, [
     request(1, 'tools/list'),
