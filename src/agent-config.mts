@@ -53,7 +53,7 @@ export function scanAgentConfig(path: string, text: string): Finding[] {
       (inEnvOrHeaders && secretKey.test(key) && literal.length >= 16 && !reference.test(literal));
     if (looksSecret) {
       findings.push(finding('AGENT_CONFIG_SECRET', 'high', path, lineOf(text, JSON.stringify(key)),
-        'Literal credential in agent/MCP configuration (' + keys.slice(-3).join('.') + ')',
+        'Literal credential in agent/MCP configuration',
         'Agent configs are often committed, synced or shared with teammates and plugins. Thousands of live keys have been found in public MCP configs.',
         'Reference an environment variable instead, e.g. "${GITHUB_TOKEN}", and set it outside the repository.'));
     }

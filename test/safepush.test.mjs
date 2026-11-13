@@ -183,3 +183,27 @@ test('control characters and token-shaped paths are not echoed unsanitized in ev
   assert.ok(!r.stdout.includes(token));assert.ok(!r.stdout.includes('\nspoof.js'));
  }
 }));
+
+// Regression: JSON property names are untrusted too. A secret-shaped MCP server name must
+// never be copied into the finding title, CLI report, or MCP tool result.
+test('agent-config JSON keys cannot leak through scanner, CLI or MCP reports',()=>sandbox(dir=>{
+ const token=fakeGithubToken();
+ writeFileSync(join(dir,'.mcp.json'),JSON.stringify({mcpServers:{[token]:{env:{API_TOKEN:token}}}}));
+ const findings=scan({root:dir}).findings;
+ assert.ok(findings.some(f=>f.rule==='AGENT_CONFIG_SECRET'));
+ assert.ok(!JSON.stringify(findings).includes(token));
+ for(const args of [['scan','.'],['scan','.','--json']]){
+  const result=run(args,dir);
+  assert.equal(result.status,1,result.stderr);
+  assert.ok(!result.stdout.includes(token));
+ }
+ const input=[
+  {jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-11-25',capabilities:{},clientInfo:{name:'test',version:'1'}}},
+  {jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'safepush_scan',arguments:{}}},
+ ].map(JSON.stringify).join('\n')+'\n';
+ const mcp=spawnSync(process.execPath,[join(dirname(executable),'mcp.mjs'),'--root',dir],{encoding:'utf8',input,timeout:15000});
+ assert.equal(mcp.status,0,mcp.stderr);
+ assert.ok(!mcp.stdout.includes(token));
+ const replies=mcp.stdout.trim().split('\n').map(JSON.parse);
+ assert.ok(JSON.parse(replies[1].result.content[0].text).findings.some(f=>f.rule==='AGENT_CONFIG_SECRET'));
+}));

@@ -55,7 +55,7 @@ export function scanAgentConfig(path, text) {
         const looksSecret = known.length > 0 ||
             (inEnvOrHeaders && secretKey.test(key) && literal.length >= 16 && !reference.test(literal));
         if (looksSecret) {
-            findings.push(finding('AGENT_CONFIG_SECRET', 'high', path, lineOf(text, JSON.stringify(key)), 'Literal credential in agent/MCP configuration (' + keys.slice(-3).join('.') + ')', 'Agent configs are often committed, synced or shared with teammates and plugins. Thousands of live keys have been found in public MCP configs.', 'Reference an environment variable instead, e.g. "${GITHUB_TOKEN}", and set it outside the repository.'));
+            findings.push(finding('AGENT_CONFIG_SECRET', 'high', path, lineOf(text, JSON.stringify(key)), 'Literal credential in agent/MCP configuration', 'Agent configs are often committed, synced or shared with teammates and plugins. Thousands of live keys have been found in public MCP configs.', 'Reference an environment variable instead, e.g. "${GITHUB_TOKEN}", and set it outside the repository.'));
         }
         if (projectLevel && keys.includes('env') && redirectVar.test(key)) {
             findings.push(finding('AGENT_CONFIG_RISK', 'high', path, lineOf(text, JSON.stringify(key)), 'Project config overrides ' + key, 'A repository-level setting can send your API key or traffic to another server as soon as the project is opened.', 'Remove it from shared config. Set endpoints in your user-level settings only, and only for servers you control.'));
