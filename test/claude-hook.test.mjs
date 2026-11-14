@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {spawnSync} from 'node:child_process';
+import {spawn, spawnSync} from 'node:child_process';
 import {mkdtempSync, writeFileSync, rmSync, realpathSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join, dirname} from 'node:path';
@@ -172,3 +172,25 @@ test('malformed hook input blocks the tool call (fail closed)', () => sandbox(di
   assert.equal(r.raw, '');
   assert.match(r.stderr, /blocked: invalid JSON/);
 }));
+
+test('oversized hook stdin fails closed without waiting for EOF', async () => {
+  const child = spawn(process.execPath, [cli, 'hook', 'claude'], {stdio: ['pipe', 'pipe', 'pipe']});
+  let stderr = '';
+  let stdout = '';
+  child.stderr.setEncoding('utf8');
+  child.stdout.setEncoding('utf8');
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  child.stdout.on('data', chunk => { stdout += chunk; });
+  // The hook intentionally exits while the parent still holds stdin open.
+  child.stdin.on('error', () => {});
+  const outcome = new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { child.kill(); reject(new Error('Oversized hook input did not fail before EOF')); }, 15000);
+    child.on('error', error => { clearTimeout(timer); reject(error); });
+    child.on('close', code => { clearTimeout(timer); resolve(code); });
+  });
+  // No stdin.end(): the old readFileSync(0) implementation waited indefinitely for EOF.
+  child.stdin.write(Buffer.alloc(16 * 1024 * 1024 + 1, 0x20));
+  assert.equal(await outcome, 2);
+  assert.equal(stdout, '');
+  assert.match(stderr, /blocked: input too large/);
+});
