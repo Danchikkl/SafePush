@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync, chmodSync, openSync, closeSync, appendFileSync, fstatSync, lstatSync, realpathSync, constants } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readSync, writeFileSync, chmodSync, openSync, closeSync, appendFileSync, fstatSync, lstatSync, realpathSync, constants } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { gitExec, gitRoot } from './git.mjs';
 import { envIgnoreMissing, redactKnownSecrets } from './rules.mjs';
@@ -120,11 +120,24 @@ function addHook(path: string): void {
   console.log('Git pre-commit hook installed; did not replace an existing hook.');
 }
 const MAX_HOOK_INPUT = 16 * 1024 * 1024;
+function readBoundedHookInput(): Buffer | null {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  // Stop after one byte beyond the cap; do not wait for EOF from an oversized stream.
+  while (size <= MAX_HOOK_INPUT) {
+    const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, MAX_HOOK_INPUT + 1 - size));
+    const read = readSync(0, buffer, 0, buffer.length, null);
+    if (read === 0) break;
+    chunks.push(buffer.subarray(0, read));
+    size += read;
+  }
+  return size > MAX_HOOK_INPUT ? null : Buffer.concat(chunks, size);
+}
 function runClaudeHook(): number {
   // This opt-in security hook blocks if its input cannot be checked.
   // Claude Code treats exit code 2 as a blocking hook error.
-  const raw = readFileSync(0);
-  if (raw.length > MAX_HOOK_INPUT) { console.error('SafePush hook blocked: input too large; not checked.'); return 2; }
+  const raw = readBoundedHookInput();
+  if (raw === null) { console.error('SafePush hook blocked: input too large; not checked.'); return 2; }
   let event: unknown;
   try { event = JSON.parse(raw.toString('utf8')); }
   catch { console.error('SafePush hook blocked: invalid JSON input; not checked.'); return 2; }
