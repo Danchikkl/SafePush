@@ -115,6 +115,7 @@ An optional `.safepush.json` at the repository root, reviewed like any other con
 - `balanced` (default): high findings deny, medium ask. `strict`: both deny. `audit`: nothing is blocked; decisions are only logged to `.git/safepush/audit.jsonl` (no paths, commands or values). Output redaction stays on in every mode.
 - Inline: `// safepush-ignore KNOWN_SECRET -- synthetic fixture` on the same or the previous line. A rule id and a reason after `--` are required.
 - An invalid policy file falls back to the defaults, never to "allow everything".
+- Guard switches accept only JSON booleans: explicit `false` disables a named guard, while malformed values such as `null`, `0` or `"false"` leave its safe default enabled.
 - `network.trustedSources`: GitHub owners or repositories (`github.com/owner/*`, `github.com/owner/repo`) and hosts (`bun.sh`, `*.example.com`) whose downloads and installs never ask. A command that mixes a trusted and an untrusted source still asks.
 - `network.blockedDomains`: hosts the agent may not fetch or scrape. Subdomains are included.
 

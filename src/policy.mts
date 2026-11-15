@@ -53,11 +53,20 @@ export function loadPolicy(repoRoot: string): Policy {
   if (raw.length > MAX_POLICY_BYTES) return DEFAULT_POLICY;
   try {
     const p = JSON.parse(raw) as Partial<Policy>;
+    // A malformed value (null, 0, "false") must not silently turn off a guard.
+    const configuredGuards = p.guards;
+    const guards = { ...DEFAULT_POLICY.guards };
+    if (configuredGuards && typeof configuredGuards === 'object' && !Array.isArray(configuredGuards)) {
+      for (const key of Object.keys(guards) as Array<keyof Policy['guards']>) {
+        const value = configuredGuards[key];
+        if (typeof value === 'boolean') guards[key] = value;
+      }
+    }
     return {
       mode: p.mode === 'strict' || p.mode === 'audit' ? p.mode : 'balanced',
       ignorePaths: Array.isArray(p.ignorePaths) ? p.ignorePaths.filter(x => typeof x === 'string').slice(0, 200) : [],
       disabledRules: Array.isArray(p.disabledRules) ? p.disabledRules.filter((x): x is RuleId => typeof x === 'string') : [],
-      guards: { ...DEFAULT_POLICY.guards, ...(typeof p.guards === 'object' && p.guards ? p.guards : {}) },
+      guards,
       network: {
         trustedSources: strings(p.network?.trustedSources),
         blockedDomains: strings(p.network?.blockedDomains),
