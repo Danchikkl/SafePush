@@ -11,7 +11,8 @@ export type RuleId =
   | 'ENCODED_SECRET'
   | 'AGENT_CONFIG_SECRET'
   | 'AGENT_CONFIG_RISK'
-  | 'HIDDEN_UNICODE';
+  | 'HIDDEN_UNICODE'
+  | 'UNPINNED_GIT_DEPENDENCY';
 
 export interface Finding {
   rule: RuleId;

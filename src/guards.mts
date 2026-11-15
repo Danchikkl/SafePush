@@ -39,14 +39,22 @@ export function promptGuard(prompt: string): { decision: 'block'; reason: string
 
 /* ------------------------------------------------------------------ sink guard */
 
-// Commands that can move data off the machine. Textual, so it is a speed bump, not a sandbox.
-const networkCommand = /\b(?:curl|wget|nc|ncat|netcat|socat|telnet|ssh|scp|sftp|rsync|ftp|nslookup|dig|host|ping|Invoke-WebRequest|iwr|Invoke-RestMethod|irm)\b|\bgh\s+(?:issue|pr|gist|api|release)\b|\bgit\s+push\b/i;
-// Ways a command can pull secret files or the whole environment into its arguments or body.
-const secretSource = /(?:^|[\s|;&(`$])(?:env|printenv|set|export\s+-p)(?=$|[\s|;&)`])|\/proc\/[^\s]*\/environ|@?~?\/?\.?(?:[\w.-]*\/)*\.env(?:\.[\w-]+)?\b|\.aws\/credentials|\.npmrc|\.netrc|id_(?:rsa|ed25519)/;
+// Shell command position: start of the command, after ; & | ( or backtick, or inside $( ).
+const AT_CMD = String.raw`(?:^|[;&|(\x60]\s*|\$\(\s*)(?:sudo\s+|command\s+)?`;
+// Commands that can move data off the machine, matched only where a command starts, so words
+// such as "--host" or "env" inside arguments do not count. Textual: a speed bump, not a sandbox.
+const networkCommand = new RegExp(AT_CMD + String.raw`(?:curl|wget|nc|ncat|netcat|socat|telnet|ssh|scp|sftp|rsync|ftp|nslookup|dig|host|Invoke-WebRequest|iwr|Invoke-RestMethod|irm|gh\s+(?:issue|pr|gist|api|release))\b`, 'i');
+// Secret files, never the committed templates (.env.example, .env.sample, .env.template).
+const SECRET_FILE = String.raw`~?\/?(?:[\w.-]+\/)*(?:\.env(?!\.(?:example|sample|template)\b)(?:\.[\w-]+)?|\.aws\/credentials|\.npmrc|\.netrc|\.pypirc|id_(?:rsa|ed25519|ecdsa|dsa)|[\w.-]+\.(?:pem|key|p12|pfx))(?![\w.-])`;
+// A secret file being READ into the command: curl @file / < file / -T file, cat/base64/... file,
+// scp/rsync with the file as a source. Writing INTO .env (curl ... > .env) is not a leak.
+const secretFileRead = new RegExp(String.raw`(?:@|<\s*|--(?:post|body|upload)-file[=\s]\s*|(?:-T|--data-binary|--data|-d|-F\s+\w+=@?)\s+@?|\b(?:cat|base64|xxd|od|head|tail|gzip|zip|tar|openssl|gpg|less|more)\s+(?:-\S+\s+)*|\b(?:scp|rsync)\s+(?:-\S+\s+)*)` + SECRET_FILE);
+// The whole environment as a value: `env | curl`, `$(env)`, `$(printenv)`, /proc/*/environ.
+const environmentDump = new RegExp(AT_CMD + String.raw`(?:env|printenv|set|export\s+-p)(?=$|\s*[|;&)\x60>])|\/proc\/[^\s]*\/environ`);
 // A single secret-named variable. Normal for authenticated calls, so this only asks.
 const secretVariable = /\$\{?[A-Z0-9_]*(?:TOKEN|SECRET|KEY|PASSWORD|PASS)[A-Z0-9_]*\}?/;
 // Commands whose only purpose is to print the environment or stored secrets.
-const envDump = /^\s*(?:env|printenv|set|export\s+-p)\s*(?:$|[|>;&])|\/proc\/[^\s]*\/environ|\bdocker\s+(?:inspect|exec\s+\S+\s+env)\b|\bkubectl\s+get\s+secrets?\b.*-o\s*(?:yaml|json)|\bheroku\s+config\b|\bvercel\s+env\s+pull\b|\bgh\s+auth\s+token\b|\baws\s+configure\s+export-credentials\b/i;
+const envDump = new RegExp(AT_CMD + String.raw`(?:env|printenv|set|export\s+-p)\s*(?:$|[|>;&])|\/proc\/[^\s]*\/environ|\bdocker\s+(?:inspect|exec\s+\S+\s+env)\b|\bkubectl\s+get\s+secrets?\b.*-o\s*(?:yaml|json)|\bheroku\s+config\b|\bvercel\s+env\s+pull\b|\bgh\s+auth\s+token\b|\baws\s+configure\s+export-credentials\b`, 'i');
 
 export function sinkGuard(toolName: string, input: Json): PreDecision {
   // 1. MCP tools: anything we hand them may be posted to a third party (issues, chats, docs).
@@ -75,7 +83,7 @@ export function sinkGuard(toolName: string, input: Json): PreDecision {
   if (toolName !== 'Bash' || typeof input.command !== 'string') return null;
   const command = input.command;
   // 3. Network command fed by an environment dump or a secret file.
-  if (networkCommand.test(command) && secretSource.test(command)) {
+  if (networkCommand.test(command) && (secretFileRead.test(command) || environmentDump.test(command))) {
     return { decision: 'deny', reason:
       'SafePush blocked a command that combines a network tool with environment variables or a ' +
       'secret file. This is how leaked agents exfiltrate credentials. If you need an authenticated ' +
