@@ -116,8 +116,16 @@ function deepRedact(value: unknown, depth = 0): { value: unknown; changed: boole
   }
   if (isRecord(value)) {
     let changed = false;
-    const out: Json = {};
-    for (const [k, v] of Object.entries(value)) { const r = deepRedact(v, depth + 1); changed ||= r.changed; out[k] = r.value; }
+    const out: Json = Object.create(null);
+    for (const [k, v] of Object.entries(value)) {
+      const safeKey = redactKnownSecrets(k);
+      const r = deepRedact(v, depth + 1);
+      changed ||= r.changed || safeKey !== k;
+      // Distinct credential-shaped keys can collapse to the same redacted name.
+      let key = safeKey;
+      for (let n = 2; Object.hasOwn(out, key); n++) key = `${safeKey} [${n}]`;
+      out[key] = r.value;
+    }
     return { value: out, changed };
   }
   return { value, changed: false };

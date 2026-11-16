@@ -86,3 +86,17 @@ test('agent edits to policy or inline suppressions always ask', () => {
     assert.equal(pre('Edit', {file_path: join(d, 'a.js'), old_string: 'x', new_string: 'const y = 1;'}), null);
   } finally { rmSync(d, {recursive: true, force: true}); }
 });
+
+
+test('PostToolUse redacts credential-shaped JSON keys without losing colliding fields', () => {
+  const other = ['gh', 'p_', 'Z9y8X7w6V5u4T3s2R1q0'.repeat(2)].join('');
+  const response = {content: [{type: 'text', text: 'safe', metadata: {[tok]: 'first', [other]: 'second', normal: 'third'}}]};
+  const raw = routeClaudeHook({hook_event_name: 'PostToolUse', tool_name: 'mcp__db__query', tool_response: response});
+  assert.ok(raw, 'a secret in a JSON property name must trigger redaction');
+  assert.ok(!raw.includes(tok) && !raw.includes(other), 'no synthetic credential may be echoed');
+  const metadata = JSON.parse(raw).hookSpecificOutput.updatedMCPToolOutput.content[0].metadata;
+  assert.equal(metadata.normal, 'third');
+  assert.equal(Object.keys(metadata).length, 3, 'colliding redacted keys must not overwrite values');
+  assert.deepEqual(Object.values(metadata).sort(), ['first', 'second', 'third'].sort());
+  assert.equal(Object.keys(metadata).filter(k => k.includes('[REDACTED]')).length, 2);
+});
