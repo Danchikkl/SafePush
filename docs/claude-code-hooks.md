@@ -31,7 +31,7 @@ The hook handles `PreToolUse` events, i.e. **before** Claude runs a tool:
 | **PostToolUse:** a tool result with a known credential in a value or JSON property name | result replaced with a `[REDACTED]` copy (see limitations) |
 | Anything else | no output; Claude Code's normal permission flow continues |
 
-Reasons shown to Claude and to you contain rule names, file paths and line numbers, **never the matched value**.
+Reasons shown to Claude and to you contain rule names, file paths and line numbers, **never the matched value**. MCP tool names are omitted from denial reasons and recorded as `mcp__external` in the local audit log, since identifiers may contain untrusted text.
 
 ## Enable it
 

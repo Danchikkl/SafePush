@@ -100,3 +100,18 @@ test('PostToolUse redacts credential-shaped JSON keys without losing colliding f
   assert.deepEqual(Object.values(metadata).sort(), ['first', 'second', 'third'].sort());
   assert.equal(Object.keys(metadata).filter(k => k.includes('[REDACTED]')).length, 2);
 });
+
+
+test('MCP tool identifiers do not leak into deny reasons or audit records', () => {
+  const d = mkdtempSync(join(tmpdir(), 'sp-mcp-name-'));
+  execSync('git init -q', {cwd: d});
+  try {
+    const toolName = 'mcp__' + tok + '__send';
+    const raw = routeClaudeHook({cwd: d, hook_event_name: 'PreToolUse', tool_name: toolName, tool_input: {body: tok}});
+    assert.equal(JSON.parse(raw).hookSpecificOutput.permissionDecision, 'deny');
+    assert.ok(!raw.includes(tok), 'deny reason must not repeat an untrusted MCP tool identifier');
+    const log = readFileSync(join(d, '.git', 'safepush', 'audit.jsonl'), 'utf8');
+    assert.ok(!log.includes(tok), 'audit log must not repeat an untrusted MCP tool identifier');
+    assert.ok(log.includes('mcp__external'), 'audit retains the MCP tool category');
+  } finally { rmSync(d, {recursive: true, force: true}); }
+});
