@@ -86,8 +86,9 @@ export function sinkGuard(toolName, input) {
 }
 /* ------------------------------------------------------------------ output guard */
 function deepRedact(value, depth = 0) {
+    // Do not return an unchecked subtree to the model when recursion reaches its safety cap.
     if (depth > 20)
-        return { value, changed: false };
+        return { value: '[REDACTED: depth limit]', changed: true };
     if (typeof value === 'string') {
         const red = redactKnownSecrets(value);
         return { value: red, changed: red !== value };

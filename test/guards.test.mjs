@@ -115,3 +115,17 @@ test('MCP tool identifiers do not leak into deny reasons or audit records', () =
     assert.ok(log.includes('mcp__external'), 'audit retains the MCP tool category');
   } finally { rmSync(d, {recursive: true, force: true}); }
 });
+
+
+test('PostToolUse never echoes unchecked content past the redaction depth limit', () => {
+  let nested = {secret: tok};
+  for (let i = 0; i < 24; i++) nested = {child: nested};
+  const response = {content: [{type: 'text', metadata: nested}]};
+  const raw = routeClaudeHook({hook_event_name: 'PostToolUse', tool_name: 'mcp__db__query', tool_response: response});
+  assert.ok(raw, 'over-deep tool output must be replaced, not passed through');
+  assert.ok(!raw.includes(tok), 'synthetic credential in unchecked subtree must not be echoed');
+  assert.ok(raw.includes('[REDACTED: depth limit]'));
+  const replaced = JSON.parse(raw).hookSpecificOutput.updatedMCPToolOutput;
+  assert.equal(replaced.content[0].type, 'text', 'ordinary outer MCP fields are retained');
+  assert.equal(routeClaudeHook({hook_event_name: 'PostToolUse', tool_name: 'mcp__db__query', tool_response: {content: [{type: 'text', text: 'safe'}]}}), '', 'normal shallow content remains unchanged');
+});

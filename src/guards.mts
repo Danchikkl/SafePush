@@ -103,7 +103,8 @@ export function sinkGuard(toolName: string, input: Json): PreDecision {
 /* ------------------------------------------------------------------ output guard */
 
 function deepRedact(value: unknown, depth = 0): { value: unknown; changed: boolean } {
-  if (depth > 20) return { value, changed: false };
+  // Do not return an unchecked subtree to the model when recursion reaches its safety cap.
+  if (depth > 20) return { value: '[REDACTED: depth limit]', changed: true };
   if (typeof value === 'string') {
     const red = redactKnownSecrets(value);
     return { value: red, changed: red !== value };
