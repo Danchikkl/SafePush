@@ -28,10 +28,10 @@ The hook handles `PreToolUse` events, i.e. **before** Claude runs a tool:
 | Network command that sends a secret-named variable such as `$GITHUB_TOKEN` | **ask**: check the destination |
 | Environment or secret dumps (`env`, `printenv`, `docker inspect`, `kubectl get secret -o yaml`, `gh auth token`) | **ask** |
 | Agent edits `.safepush.json` or adds a `safepush-ignore` comment | **ask**, in every mode |
-| **PostToolUse:** a tool result that contains a known credential | result replaced with a `[REDACTED]` copy (see limitations) |
+| **PostToolUse:** a tool result with a known credential in a value or JSON property name | result replaced with a `[REDACTED]` copy (see limitations) |
 | Anything else | no output; Claude Code's normal permission flow continues |
 
-Reasons shown to Claude and to you contain rule names, file paths and line numbers, **never the matched value**.
+Reasons shown to Claude and to you contain rule names, file paths and line numbers, **never the matched value**. MCP tool names are omitted from denial reasons and recorded as `mcp__external` in the local audit log, since identifiers may contain untrusted text.
 
 ## Enable it
 
@@ -110,6 +110,8 @@ An optional `.safepush.json` at the repository root, reviewed like any other con
 - **`git commit` detection is textual.** Commands assembled indirectly (aliases, scripts, `sh -c "$VAR"`) are not recognised. The repository is taken from `-C <dir>` or the session's working directory; a preceding `cd other && git commit` is checked against the working directory.
 - **Fails closed on bad input.** Malformed or oversized hook input exits with status 2, which blocks the tool call. This is safer for secrets but can interrupt work if Claude Code changes its event format; check the hook after upgrading Claude Code.
 - **`ask` decisions are only as good as your review.** If you approve, the action proceeds.
+- **Very deeply nested tool results are truncated.** After 20 levels of nesting, SafePush replaces the entire unchecked subtree with `[REDACTED: depth limit]` rather than passing possible credentials through. This may change a deeply nested MCP result's schema.
+- **Redacted JSON keys can change output schemas.** Credential-shaped property names are replaced; if multiple keys collapse to the same redacted name, SafePush keeps their values under distinct suffixed names. Normal keys are unchanged. Verify downstream consumers before relying on rewritten MCP output.
 - **Output redaction for Bash may not apply.** Users have reported that Claude Code ignores `updatedToolOutput` for the Bash tool. The environment-dump rule is the preventive layer for shell commands; verify redaction in your Claude Code version before relying on it.
 - **Network checks are textual.** Scripts, aliases or `python -c` that send data from inside are not seen. Use Claude Code's sandbox and network restrictions alongside SafePush.
 - A clean result is not a security audit.

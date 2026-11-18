@@ -23,7 +23,7 @@ export function audit(repoRoot, entry) {
                 renameSync(file, file + '.1');
         }
         catch { /* first write */ }
-        const safe = Object.fromEntries(Object.entries(entry).map(([k, v]) => [k, String(v).slice(0, 80).replace(/[^\w.:/ -]/g, '?')]));
+        const safe = Object.fromEntries(Object.entries(entry).map(([k, v]) => [k, (k === 'tool' && String(v).startsWith('mcp__') ? 'mcp__external' : String(v)).slice(0, 80).replace(/[^\w.:/ -]/g, '?')]));
         appendFileSync(file, JSON.stringify({ time: new Date().toISOString(), ...safe }) + '\n', { mode: 0o600 });
     }
     catch { /* never affect the decision */ }
