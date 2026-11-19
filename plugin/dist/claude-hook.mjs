@@ -121,6 +121,11 @@ function gitIgnores(cwd, absFile) {
         throw error;
     }
 }
+function isGuardConfigPath(cwd, file) {
+    const rel = relative(cwd, resolve(cwd, file)).replaceAll('\\', '/');
+    // Only the project's Claude hook and permission configuration, not arbitrary .claude files.
+    return /(?:^|\/)\.claude\/(?:settings(?:\.local)?\.json|hooks\/[^/]+(?:\/[^/]+)*)$/i.test(rel);
+}
 function checkWrite(cwd, file, text, partial) {
     const abs = resolve(cwd, file);
     const shown = displayPath(cwd, file);
@@ -139,6 +144,11 @@ function checkWrite(cwd, file, text, partial) {
                     list(exposed, !partial) };
         }
         return null;
+    }
+    if (!findings.length && isGuardConfigPath(cwd, file)) {
+        return { decision: 'ask', reason: 'SafePush: this edit changes Claude Code permissions or security hooks (' + shown + '). ' +
+                'Review the exact diff before approving; an agent should not silently weaken its own safeguards. ' +
+                'This hook cannot prevent edits made through arbitrary shell commands or external tools.' };
     }
     if (!findings.length)
         return null;
@@ -165,6 +175,11 @@ function checkBash(cwd, command) {
         if (/\s--no-verify\s|\s-n\s/.test(args)) {
             return { decision: 'deny', reason: 'SafePush: committing with --no-verify skips the project\'s Git hooks, including secret checks. ' +
                     'Commit without it. If a hook is failing, show the user the hook output and let them decide.' };
+        }
+        // A null-device hooksPath bypasses the project's pre-commit checks.
+        if (/(?:^|\s)-c\s+core\.hooksPath=(?:\/dev\/null|NUL)(?=\s|$)/i.test(match[1])) {
+            return { decision: 'deny', reason: 'SafePush: this commit disables Git hooks through core.hooksPath. ' +
+                    'Commit without overriding the hook path, and review failing hooks instead.' };
         }
         const dirFlag = /-C\s+(\S+)/.exec(match[1]);
         const dir = resolve(cwd, dirFlag ? dirFlag[1].replace(/^['"]|['"]$/g, '') : '.');
