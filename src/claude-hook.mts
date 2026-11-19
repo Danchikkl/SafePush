@@ -189,6 +189,12 @@ function checkBash(cwd: string, command: string): HookDecision {
         'SafePush: committing with --no-verify skips the project\'s Git hooks, including secret checks. ' +
         'Commit without it. If a hook is failing, show the user the hook output and let them decide.' };
     }
+    // A null-device hooksPath bypasses the project's pre-commit checks.
+    if (/(?:^|\s)-c\s+core\.hooksPath=(?:\/dev\/null|NUL)(?=\s|$)/i.test(match[1])) {
+      return { decision: 'deny', reason:
+        'SafePush: this commit disables Git hooks through core.hooksPath. ' +
+        'Commit without overriding the hook path, and review failing hooks instead.' };
+    }
     const dirFlag = /-C\s+(\S+)/.exec(match[1]);
     const dir = resolve(cwd, dirFlag ? dirFlag[1].replace(/^['"]|['"]$/g, '') : '.');
     // `git commit -a` also commits modified tracked files that are not staged yet.

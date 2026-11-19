@@ -112,6 +112,23 @@ test('denies bypassing Git hooks', () => sandbox(dir => {
   }
 }));
 
+test('denies null-device hooksPath commit bypass, preserves ordinary git -c', () => sandbox(dir => {
+  for (const command of [
+    'git -c core.hooksPath=/dev/null commit -m x',
+    'git -C . -c core.hooksPath=/dev/null commit -m x',
+    'git -c core.hooksPath=NUL commit -m x',
+  ]) {
+    const r = hook(pre(dir, 'Bash', {command}), dir);
+    assert.equal(r.decision?.permissionDecision, 'deny', command);
+    assert.match(r.decision.permissionDecisionReason, /core\.hooksPath/);
+  }
+  git(['init', '-q'], dir);
+  writeFileSync(join(dir, 'clean.js'), 'console.log(1);\n');
+  git(['add', 'clean.js'], dir);
+  assert.equal(hook(pre(dir, 'Bash', {command: 'git -c user.name=Test commit -m clean'}), dir).raw, '');
+  assert.equal(hook(pre(dir, 'Bash', {command: 'git -c core.hooksPath=/dev/null status'}), dir).raw, '');
+}));
+
 test('asks when a shell command embeds a credential', () => sandbox(dir => {
   const t = token();
   const r = hook(pre(dir, 'Bash', {command: `echo "GITHUB_TOKEN=${t}" >> .env`}), dir);
